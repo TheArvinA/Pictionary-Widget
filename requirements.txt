@@ -1,0 +1,115 @@
+PICTIONARY WIDGET - REQUIREMENTS
+=================================
+
+
+FUNCTIONAL REQUIREMENTS
+------------------------
+
+FR-01  Daily Word System
+       - The system shall select 3 random words each day at midnight
+       - All users shall see the same 3 word choices for that day
+       - Word choices shall reset every 24 hours via automated Cloud Function
+       - A player may only select one word per day
+
+FR-02  Drawing Canvas
+       - The app shall provide a finger-drawing canvas
+       - The canvas shall support freehand stroke input via touch
+       - The canvas shall support at minimum 3 brush colors and 2 brush sizes
+       - The player shall be able to undo the last stroke
+       - The canvas shall export the drawing as a PNG image on submission
+
+FR-03  Drawing Submission
+       - A player must submit their drawing before accessing any other player's drawing
+       - On submission, the drawing image shall be uploaded to Firebase Storage
+       - The player's hasSubmittedDrawing flag in Firestore shall be set to true upon upload
+       - Submission shall be final — drawings cannot be changed after submitting
+
+FR-04  Anti-cheat (Draw Before You Guess)
+       - A player shall not be able to view friends' drawings until hasSubmittedDrawing is true
+       - This rule shall be enforced by Firestore security rules (server-side), not only the UI
+       - A player shall not be able to submit a guess before submitting their own drawing
+
+FR-05  Guessing
+       - After submitting their drawing, a player may view all friends' submitted drawings
+       - A player shall submit a text guess for each friend's drawing
+       - Guesses shall be stored in Firestore linked to the round document
+
+FR-06  Notifications
+       - The app shall send a push notification when a friend submits their drawing
+       - Notifications shall be delivered via Firebase Cloud Messaging (FCM)
+
+FR-07  Friend System
+       - A user shall have a unique shareable code or username
+       - A user shall be able to add friends using this code
+       - A user shall be able to view a list of their current friends
+
+FR-08  Authentication
+       - The app shall support account creation and login via Google Sign-In (Firebase Auth)
+       - User sessions shall persist between app launches
+
+
+NON-FUNCTIONAL REQUIREMENTS
+-----------------------------
+
+NFR-01  Performance
+        - Drawing canvas shall respond to touch input with no perceptible lag (<16ms frame time)
+        - Firestore game state updates shall reflect across devices within 2 seconds
+
+NFR-02  Platform Support
+        - Phase 1: Android 10+ (API level 29+)
+        - Phase 2: iOS 15+
+
+NFR-03  Offline Handling
+        - The app shall display a clear error state when the user has no internet connection
+        - Drawings in progress (pre-submission) shall be held in local state only
+
+NFR-04  Security
+        - Firestore security rules shall enforce all game logic constraints server-side
+        - No player shall be able to access another player's word choice before the round ends
+        - Drawing image URLs shall only be readable by users in the same friend group
+
+NFR-05  Scalability
+        - The backend shall support at least 100 concurrent users without manual scaling
+        - Firebase serverless architecture handles this automatically
+
+
+DEPENDENCIES & TOOLS
+---------------------
+
+Development
+  - Flutter SDK (latest stable)
+  - Dart SDK (bundled with Flutter)
+  - Android Studio (for Android build + emulator)
+  - Xcode (Phase 2 - iOS only, requires macOS)
+
+Firebase Services
+  - Firebase Auth
+  - Cloud Firestore
+  - Firebase Storage
+  - Firebase Cloud Messaging (FCM)
+  - Firebase Cloud Functions (Node.js runtime)
+  - Firebase Hosting (optional, for any web admin panel)
+
+Flutter Packages (planned)
+  - firebase_core
+  - firebase_auth
+  - cloud_firestore
+  - firebase_storage
+  - firebase_messaging
+  - google_sign_in
+  - flutter_colorpicker (or custom)
+
+Testing
+  - Physical Android device (Samsung) for primary testing
+  - Flutter widget tests for canvas logic
+  - Firebase Emulator Suite for local backend testing
+
+
+OUT OF SCOPE (v1)
+-----------------
+  - Web version
+  - Real-time stroke-by-stroke drawing visibility for guessers
+  - In-app chat / messaging
+  - Leaderboard or scoring system
+  - Word suggestions from users
+  - Animated drawing playback
