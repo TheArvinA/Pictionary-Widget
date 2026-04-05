@@ -47,6 +47,70 @@ PROJECT OUTLINE
    - Phase 2: iOS (requires Mac + Xcode, distribute via TestFlight)
 
 
+INITIAL SETUP — WHAT TO DOWNLOAD
+---------------------------------
+Everything below assumes a fresh Windows machine with nothing installed.
+
+STEP 1 — Git
+  Download: https://git-scm.com/download/win
+  Install with defaults. Required for version control and pushing to GitHub.
+
+STEP 2 — GitHub CLI (gh)
+  Download: https://cli.github.com
+  Or via terminal: winget install --id GitHub.cli
+  After installing, run: gh auth login
+  Required to create/manage GitHub repos from the terminal.
+
+STEP 3 — Flutter SDK
+  Download: https://docs.flutter.dev/get-started/install/windows
+  - Download the Flutter ZIP, extract it (e.g. to C:\flutter)
+  - Add C:\flutter\bin to your system PATH
+  - Run: flutter doctor   (shows what else is missing)
+  Includes Dart — no separate Dart install needed.
+
+STEP 4 — Android Studio
+  Download: https://developer.android.com/studio
+  Required for:
+  - Android SDK and build tools (flutter needs these even if you don't use the IDE)
+  - USB debugging / device connection
+  After installing, open Android Studio and complete the setup wizard.
+  Then run: flutter doctor   again to confirm Android toolchain is green.
+
+STEP 5 — Enable Developer Mode on your Samsung
+  On your Samsung: Settings -> About Phone -> tap "Build Number" 7 times
+  Then: Settings -> Developer Options -> enable "USB Debugging"
+  Connect via USB and run: flutter devices   to confirm it's detected.
+
+STEP 6 — VS Code (recommended editor)
+  Download: https://code.visualstudio.com
+  Install these extensions inside VS Code:
+  - Flutter (by Dart Code) — includes Dart support
+  - Dart (by Dart Code)
+
+STEP 7 — Firebase CLI + Node.js (for Cloud Functions)
+  Node.js download: https://nodejs.org  (install LTS version)
+  Then in terminal:
+    npm install -g firebase-tools
+    firebase login
+  Required for deploying Cloud Functions and Firestore rules.
+
+STEP 8 — Create a Firebase Project
+  Go to: https://console.firebase.google.com
+  - Create a new project (e.g. "pictionary-widget")
+  - Enable: Authentication, Firestore, Storage, Cloud Messaging, Functions
+  - Add an Android app, download google-services.json (goes in android/app/)
+  - Add an iOS app later when ready for Phase 2
+
+VERIFICATION CHECKLIST
+  Run these to confirm everything is working before writing code:
+  [ ] git --version
+  [ ] gh --version
+  [ ] flutter doctor   (all checkmarks green for Android)
+  [ ] flutter devices   (your Samsung shows up)
+  [ ] firebase --version
+  [ ] node --version
+
+
 TECH STACK
 ----------
 - Framework:  Flutter (Dart) — single codebase for Android + iOS
