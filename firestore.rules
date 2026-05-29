@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasSubmittedDrawing(date) {
+      return exists(/databases/$(database)/documents/rounds/$(date)/players/$(request.auth.uid))
+        && get(/databases/$(database)/documents/rounds/$(date)/players/$(request.auth.uid)).data.hasSubmittedDrawing == true;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSelf(userId);
+      allow update: if isSelf(userId);
+      allow delete: if false;
+    }
+
+    match /daily/{date} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /rounds/{date}/players/{drawerId} {
+      allow read: if isSelf(drawerId) || hasSubmittedDrawing(date);
+      allow create, update: if isSelf(drawerId);
+      allow delete: if false;
+    }
+
+    match /rounds/{date}/guesses/{guessId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == resource.data.guesserId
+            || request.auth.uid == resource.data.drawerId);
+      // The doc id must be "<guesserId>_<drawerId>", the guesser must be the
+      // caller, and you can't guess your own drawing. This ties drawerId to the
+      // id so a guess can't be aimed at an arbitrary victim; the onGuessCorrect
+      // function still re-verifies `correct` server-side against chosenWord.
+      allow create: if isSignedIn()
+        && request.resource.data.guesserId == request.auth.uid
+        && request.resource.data.drawerId != request.auth.uid
+        && guessId == request.resource.data.guesserId + '_' + request.resource.data.drawerId
+        && hasSubmittedDrawing(date);
+      allow update: if isSignedIn()
+        && resource.data.guesserId == request.auth.uid
+        && request.resource.data.guesserId == resource.data.guesserId
+        && request.resource.data.drawerId == resource.data.drawerId;
+      allow delete: if false;
+    }
+
+    match /wordList/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+  }
+}

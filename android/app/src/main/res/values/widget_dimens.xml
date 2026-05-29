@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="widget_padding">12dp</dimen>
+    <dimen name="widget_corner">16dp</dimen>
+    <dimen name="widget_cell_corner">12dp</dimen>
+    <dimen name="widget_row_spacing">6dp</dimen>
+    <dimen name="widget_title_text">14sp</dimen>
+    <dimen name="widget_body_text">14sp</dimen>
+    <dimen name="widget_status_text">12sp</dimen>
+    <dimen name="widget_streak_text">32sp</dimen>
+    <dimen name="widget_initial_size">36dp</dimen>
+</resources>

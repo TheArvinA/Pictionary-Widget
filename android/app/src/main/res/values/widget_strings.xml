@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_title_draw">Today\'s words — tap to draw</string>
+    <string name="widget_title_guess">Guess your friends</string>
+    <string name="widget_see_all">See all in feed</string>
+    <string name="widget_guess">Tap to guess</string>
+    <string name="widget_waiting">Waiting…</string>
+    <string name="widget_streak_label">Day streak</string>
+    <!-- %1$d = day number -->
+    <string name="widget_day_label">Day %1$d</string>
+    <!-- %1$d = solved, %2$d = total -->
+    <string name="widget_summary">You guessed %1$d/%2$d today</string>
+    <string name="widget_description">Daily Pictionary — draw and guess with friends.</string>
+</resources>
