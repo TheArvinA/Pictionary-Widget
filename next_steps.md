@@ -1,12 +1,42 @@
 # Next Steps — Things Only You Can Do
 
-This file lists the **manual** tasks — the ones that need browser OAuth, Firebase console clicks, billing, a physical device, or Apple/Google developer accounts. None of these can be scripted from a Claude session. The actual app/Cloud-Function **code** is written for you (Phase 1 + Phase 2 are done; Phase 3 code is produced by the `pictionary-phase3` workflow).
+This file lists the **manual** tasks — the ones that need browser OAuth, Firebase console clicks, billing, a physical device, or Apple/Google developer accounts. None of these can be scripted from a Claude session. The actual app/Cloud-Function **code** is written for you (Phases 1–5 are done).
 
 Run terminal steps from a **fresh PowerShell window** (so the PATH / `ANDROID_HOME` env vars are picked up):
 
 ```powershell
 cd "C:\Projects\Pictionary Widget"
 ```
+
+## ⭐ START HERE next session
+
+All code is written. You just need Firebase connected to run it. Do these in order:
+
+- [ ] `firebase login` → create Firebase project (Blaze plan) → enable Auth/Firestore/Storage/Functions/Messaging
+- [ ] `firebase use --add` (alias project as "default")
+- [ ] `dart pub global activate flutterfire_cli` then `flutterfire configure` — picks android, overwrites `lib/firebase_options.dart`, drops `android/app/google-services.json`
+- [ ] `firebase deploy --only firestore:rules,storage:rules,firestore:indexes,functions`
+- [ ] Firebase Console → Functions → `dailyWordReset` → Testing → Run test (seeds today's words)
+- [ ] Enable USB debugging on your phone, plug in, run `flutter devices` to confirm it shows up
+- [ ] `flutter run` — you should see the sign-in screen
+
+Once the app boots, continue with the Phase 3 + 4 manual steps below (deploy functions, test notifications, add the home screen widget).
+
+---
+
+## 🐛 Known bugs to fix next session
+
+Found during the first on-device run (2026-06-14):
+
+- [ ] **Home screen lets you draw again after you've already submitted today.** After submitting a drawing and pressing the home button, the word-selection screen shows the 3 word choices again and lets you draw a second time. You're only meant to draw once per UTC day.
+  - **Expected:** if the signed-in user already has a submission for today (`rounds/{today}/players/{uid}.hasSubmittedDrawing == true`), the home/word-selection screen should **not** show the word choices. Instead show their submitted drawing for the day (and/or a "You've drawn today — come back tomorrow" state), and route them to the feed.
+  - **Likely fix area:** the word-selection screen / router redirect logic (`lib/features/word_selection/word_selection_screen.dart`, `lib/core/routing/app_router.dart`) — add a check on the player doc's `hasSubmittedDrawing` before rendering word choices.
+
+### Already fixed this session (for reference)
+- `storage.rules`: `{drawerId}.png` was invalid wildcard syntax → changed to `{fileName}` with `fileName == request.auth.uid + '.png'` checks.
+- `storage.rules`: read rule denied the owner reading their own freshly-uploaded drawing (the `getDownloadURL()` right after upload 403'd) → added an owner-can-always-read clause. **These rule edits are deployed but not yet committed to git.**
+
+---
 
 ## Manual checklist at a glance
 
@@ -19,9 +49,9 @@ cd "C:\Projects\Pictionary Widget"
 - [ ] §5 Connect a Samsung (USB debugging) or create an emulator
 - [ ] §6 `flutter run` and smoke-test the Phase 1 + Phase 2 game loop
 
-**After the Phase 3 code is written (see §Phase 3 at the bottom):**
-- [ ] `cd functions; npm install` (pulls any new function deps), then `firebase deploy --only functions`
-- [ ] `flutter pub get` (picks up the new `cloud_functions` package)
+**After the Phase 3 code is written (already done — just needs deploy + test):**
+- [ ] `cd functions; npm install` then `firebase deploy --only functions`
+- [ ] `flutter pub get` (picks up the `cloud_functions` package)
 - [ ] Test friend invites end-to-end with a second account
 - [ ] Test the 3 push-notification triggers on a real device (emulators are unreliable for FCM)
 
