@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../core/util/today.dart';
 import '../../models/guess.dart';
 import '../../models/player_round.dart';
+import '../../widgets/error_state.dart';
 
 const _maxAttempts = 3;
 
@@ -47,7 +50,8 @@ class GuessingScreen extends ConsumerStatefulWidget {
   ConsumerState<GuessingScreen> createState() => _GuessingScreenState();
 }
 
-class _GuessingScreenState extends ConsumerState<GuessingScreen> {
+class _GuessingScreenState extends ConsumerState<GuessingScreen>
+    with TickerProviderStateMixin {
   final _controller = TextEditingController();
   final List<String> _attempts = [];
   bool _correct = false;
@@ -55,12 +59,28 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen> {
   bool _submitting = false;
   bool _seeded = false;
 
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+
   bool get _finished => _correct || _attempts.length >= _maxAttempts;
   int get _remaining => _maxAttempts - _attempts.length;
 
   @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.linear),
+    );
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
+    _shakeController.dispose();
     super.dispose();
   }
 
@@ -72,21 +92,29 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen> {
 
     final isCorrect = _normalize(raw) == _normalize(chosenWord);
 
-    setState(() {
-      _attempts.add(raw.trim());
-      _controller.clear();
-      if (isCorrect) {
+    if (!isCorrect) {
+      // Shake animation on wrong guess, then clear and update state.
+      await _shakeController.forward(from: 0);
+      _shakeController.reset();
+      setState(() {
+        _attempts.add(raw.trim());
+        _controller.clear();
+      });
+    } else {
+      setState(() {
+        _attempts.add(raw.trim());
+        _controller.clear();
         _correct = true;
         _solvedOnAttempt = _attempts.length;
-      }
-    });
+      });
+    }
 
     if (_finished) {
-      await _recordResult();
+      await _recordResult(isCorrect: isCorrect);
     }
   }
 
-  Future<void> _recordResult() async {
+  Future<void> _recordResult({required bool isCorrect}) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
@@ -108,6 +136,27 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen> {
             firestore: ref.read(firestoreServiceProvider),
             uid: uid,
           ));
+
+      if (isCorrect && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(milliseconds: 1500),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 10),
+                Text(
+                  'Correct! Well done!',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 1500));
+        if (mounted) context.go('/feed');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,7 +185,10 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen> {
 
     return myRound.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => ErrorState(
+        message: 'Something went wrong',
+        onRetry: () => ref.invalidate(_myRoundProvider(uid)),
+      ),
       data: (mine) {
         // Anti-cheat gate: must have submitted own drawing first.
         if (mine == null || !mine.hasSubmittedDrawing) {
@@ -152,7 +204,10 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen> {
 
     return round.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => ErrorState(
+        message: 'Something went wrong',
+        onRetry: () => ref.invalidate(_drawerRoundProvider(widget.drawerId)),
+      ),
       data: (pr) {
         if (pr == null || !pr.hasSubmittedDrawing || pr.drawingUrl == null) {
           return const Center(
@@ -216,7 +271,11 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen> {
 
     return existing.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => ErrorState(
+        message: 'Something went wrong',
+        onRetry: () =>
+            ref.invalidate(_existingGuessProvider(widget.drawerId)),
+      ),
       data: (saved) {
         if (!_seeded) {
           _seeded = true;
@@ -325,21 +384,42 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Attempts left: $_remaining',
-          style: theme.textTheme.labelLarge,
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _controller,
-          autofocus: true,
-          textInputAction: TextInputAction.done,
-          enabled: !_submitting,
-          decoration: const InputDecoration(
-            labelText: 'Your guess',
-            border: OutlineInputBorder(),
+        AnimatedBuilder(
+          animation: _shakeAnimation,
+          builder: (context, child) {
+            // Sin-wave horizontal shake offset
+            final offset =
+                math.sin(_shakeAnimation.value * math.pi * 5) * 8.0;
+            return Transform.translate(
+              offset: Offset(offset, 0),
+              child: child,
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '$_remaining attempt${_remaining == 1 ? '' : 's'} remaining',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: _remaining == 1
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                enabled: !_submitting,
+                decoration: const InputDecoration(
+                  labelText: 'Your guess',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _submitGuess(chosenWord),
+              ),
+            ],
           ),
-          onSubmitted: (_) => _submitGuess(chosenWord),
         ),
         const SizedBox(height: 12),
         FilledButton.icon(

@@ -148,8 +148,8 @@ export const onGuessCorrect = onDocumentWritten(
     const guesserName =
       asString(guesserSnap.data()?.displayName) ?? 'Someone';
 
-    await getMessaging().sendEachForMulticast({
-      tokens: [token],
+    await getMessaging().send({
+      token,
       notification: {
         title: 'Guessed!',
         body: `${guesserName} guessed your drawing!`,

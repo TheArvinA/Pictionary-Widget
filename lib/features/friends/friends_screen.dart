@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../../models/app_user.dart';
+import '../../widgets/error_state.dart';
 
 final _meProvider = StreamProvider.autoDispose<AppUser?>((ref) {
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -70,7 +71,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       appBar: AppBar(title: const Text('Friends')),
       body: me.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => ErrorState(
+          message: 'Something went wrong',
+          onRetry: () => ref.invalidate(_meProvider),
+        ),
         data: (user) {
           if (user == null) return const Center(child: Text('No profile yet.'));
           return ListView(
@@ -192,13 +196,13 @@ class _FriendTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final friend = ref.watch(_friendProvider(friendId));
     return friend.when(
-      loading: () => ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person)),
-        title: Text(friendId),
+      loading: () => const ListTile(
+        leading: CircleAvatar(child: Icon(Icons.person)),
+        title: Text('Loading…'),
       ),
-      error: (_, __) => ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person)),
-        title: Text(friendId),
+      error: (_, __) => const ListTile(
+        leading: CircleAvatar(child: Icon(Icons.person)),
+        title: Text('Unknown'),
       ),
       data: (user) => ListTile(
         leading: const CircleAvatar(child: Icon(Icons.person)),

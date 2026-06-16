@@ -21,6 +21,23 @@ class _PictionaryAppState extends ConsumerState<PictionaryApp>
   bool _tapsWired = false;
   StreamSubscription<Uri?>? _widgetClickSub;
 
+  /// A widget deep-link captured at cold start before Firebase Auth has
+  /// restored the persisted session. Replayed from the auth listener in
+  /// [build] once a user is present, so the canvas destination isn't lost to
+  /// the go_router redirect (which sends a null user to /sign-in then /).
+  String? _pendingDeepLink;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_tapsWired) {
+      _tapsWired = true;
+      final router = ref.read(appRouterProvider);
+      ref.read(fcmServiceProvider).wireNotificationTaps(router.go);
+      _wireWidgetTaps(router);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -44,10 +61,10 @@ class _PictionaryAppState extends ConsumerState<PictionaryApp>
   /// Best-effort widget refresh; never throws (refresh swallows its own errors).
   void _refreshWidget() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    ref.read(widgetServiceProvider).refresh(
-          firestore: ref.read(firestoreServiceProvider),
-          uid: uid,
-        );
+    unawaited(ref.read(widgetServiceProvider).refresh(
+      firestore: ref.read(firestoreServiceProvider),
+      uid: uid,
+    ));
   }
 
   /// Parses the `route` query param of a widget deep-link and navigates to it.
@@ -56,6 +73,15 @@ class _PictionaryAppState extends ConsumerState<PictionaryApp>
     if (uri == null) return;
     final route = uri.queryParameters['route'];
     if (route == null || route.isEmpty) return;
+
+    // Cold start: Firebase Auth restores the persisted session asynchronously,
+    // so currentUser is still null here. Navigating now would be overwritten by
+    // the redirect (-> /sign-in then -> /), losing the deep link. Defer it and
+    // let the authStateChanges listener replay it once the user is restored.
+    if (FirebaseAuth.instance.currentUser == null) {
+      _pendingDeepLink = route;
+      return;
+    }
     router.go(route);
   }
 
@@ -84,19 +110,23 @@ class _PictionaryAppState extends ConsumerState<PictionaryApp>
       if (uid != null) {
         ref.read(fcmServiceProvider).registerForUser(uid);
         // Seed the home-screen widget with this user's current state.
-        ref.read(widgetServiceProvider).refresh(
+        unawaited(ref.read(widgetServiceProvider).refresh(
               firestore: ref.read(firestoreServiceProvider),
               uid: uid,
-            );
+            ));
+
+        // Replay a widget deep-link that arrived before auth was restored.
+        // Clear the field first so a later auth emission can't double-navigate.
+        // Schedule post-frame to avoid navigating during the build/listen pass.
+        final pending = _pendingDeepLink;
+        if (pending != null) {
+          _pendingDeepLink = null;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            router.go(pending);
+          });
+        }
       }
     });
-
-    // Wire taps once, now that the router exists.
-    if (!_tapsWired) {
-      _tapsWired = true;
-      ref.read(fcmServiceProvider).wireNotificationTaps(router.go);
-      _wireWidgetTaps(router);
-    }
 
     return MaterialApp.router(
       title: 'Pictionary Daily',

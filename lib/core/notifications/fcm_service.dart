@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 
 class FcmService {
   FcmService({FirebaseMessaging? messaging, FirebaseFirestore? firestore})
@@ -9,6 +10,8 @@ class FcmService {
 
   final FirebaseMessaging _messaging;
   final FirebaseFirestore _firestore;
+
+  StreamSubscription<String>? _tokenRefreshSub;
 
   Future<void> registerForUser(String uid) async {
     await _messaging.requestPermission();
@@ -19,7 +22,8 @@ class FcmService {
         SetOptions(merge: true),
       );
     }
-    _messaging.onTokenRefresh.listen((newToken) {
+    await _tokenRefreshSub?.cancel();
+    _tokenRefreshSub = _messaging.onTokenRefresh.listen((newToken) {
       _firestore.collection('users').doc(uid).set(
         {'fcmToken': newToken},
         SetOptions(merge: true),
@@ -28,11 +32,6 @@ class FcmService {
 
     // Subscribe to the broadcast topic used for the daily word reset push.
     await _messaging.subscribeToTopic('daily');
-
-    // Foreground messages: the OS shows nothing by default. Keep minimal.
-    FirebaseMessaging.onMessage.listen((message) {
-      debugPrint('FCM foreground message: ${message.messageId}');
-    });
   }
 
   /// Wires tap-to-navigate. Call once after the router is available, passing a

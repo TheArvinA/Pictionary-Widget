@@ -8,6 +8,7 @@ import '../../core/providers.dart';
 import '../../core/util/today.dart';
 import '../../models/app_user.dart';
 import '../../models/player_round.dart';
+import '../../widgets/error_state.dart';
 
 final _currentUserProvider = StreamProvider.autoDispose<AppUser?>((ref) {
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -45,7 +46,10 @@ class FeedScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text("Friends' drawings")),
       body: myRound.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => ErrorState(
+          message: 'Something went wrong',
+          onRetry: () => ref.invalidate(_myRoundProvider),
+        ),
         data: (round) {
           // ANTI-CHEAT GATE: must submit your own drawing first.
           if (round == null || !round.hasSubmittedDrawing) {
@@ -96,25 +100,35 @@ class _FriendsFeed extends ConsumerWidget {
 
     return user.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => ErrorState(
+        message: 'Something went wrong',
+        onRetry: () => ref.invalidate(_currentUserProvider),
+      ),
       data: (appUser) {
         final friendIds = appUser?.friendIds ?? const <String>[];
         if (friendIds.isEmpty) {
           return const _EmptyState(
-            message:
-                'Add some friends to see their daily drawings here.',
+            message: 'Add some friends to see their daily drawings here.',
           );
         }
 
         final drawings = ref.watch(_friendDrawingsProvider(friendIds));
+        final names = ref.watch(friendNamesProvider(friendIds));
         return drawings.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => ErrorState(
+            message: 'Something went wrong',
+            onRetry: () =>
+                ref.invalidate(_friendDrawingsProvider(friendIds)),
+          ),
           data: (rounds) {
             final byDrawer = {for (final r in rounds) r.drawerId: r};
             final submittedCount = rounds
                 .where((r) => r.hasSubmittedDrawing && r.drawingUrl != null)
                 .length;
+            // Resolve display names; fall back to uid while names are loading.
+            final nameMap =
+                names.valueOrNull ?? const <String, String>{};
             if (submittedCount == 0) {
               return const _EmptyState(
                 message:
@@ -136,11 +150,13 @@ class _FriendsFeed extends ConsumerWidget {
                 final hasDrawing = round != null &&
                     round.hasSubmittedDrawing &&
                     round.drawingUrl != null;
+                final friendName = nameMap[friendId] ?? friendId;
                 if (!hasDrawing) {
-                  return _PlaceholderTile(friendId: friendId);
+                  return _PlaceholderTile(friendName: friendName);
                 }
                 return _DrawingTile(
                   friendId: friendId,
+                  friendName: friendName,
                   drawingUrl: round.drawingUrl!,
                 );
               },
@@ -153,23 +169,31 @@ class _FriendsFeed extends ConsumerWidget {
 }
 
 class _DrawingTile extends StatelessWidget {
-  const _DrawingTile({required this.friendId, required this.drawingUrl});
+  const _DrawingTile({
+    required this.friendId,
+    required this.friendName,
+    required this.drawingUrl,
+  });
   final String friendId;
+  final String friendName;
   final String drawingUrl;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push('/guess/$friendId'),
-        child: CachedNetworkImage(
+      child: Tooltip(
+        message: friendName,
+        child: InkWell(
+          onTap: () => context.push('/guess/$friendId'),
+          child: CachedNetworkImage(
           imageUrl: drawingUrl,
           fit: BoxFit.cover,
           placeholder: (context, url) =>
               const Center(child: CircularProgressIndicator()),
           errorWidget: (context, url, error) =>
               const Center(child: Icon(Icons.broken_image_outlined)),
+          ),
         ),
       ),
     );
@@ -177,8 +201,8 @@ class _DrawingTile extends StatelessWidget {
 }
 
 class _PlaceholderTile extends StatelessWidget {
-  const _PlaceholderTile({required this.friendId});
-  final String friendId;
+  const _PlaceholderTile({required this.friendName});
+  final String friendName;
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +217,7 @@ class _PlaceholderTile extends StatelessWidget {
             Icon(Icons.hourglass_empty, color: scheme.onSurfaceVariant),
             const SizedBox(height: 8),
             Text(
-              'waiting for $friendId',
+              'waiting for $friendName',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
               maxLines: 2,

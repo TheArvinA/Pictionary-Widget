@@ -114,6 +114,24 @@ class WidgetService {
         return;
       }
 
+      // Already submitted. Sync a baseline state 2 up front, BEFORE the friend
+      // enrichment, so an enrichment failure (offline/permissions/empty merge)
+      // can never abort to the outer catch and strand the widget on state 1.
+      await sync(
+        state: 2,
+        words: const [],
+        friends: const [],
+        streak: streak,
+        day: streak,
+        solved: 0,
+        total: 0,
+      );
+
+      // Enrich state 2 with friend data to decide state 2 vs 3. Isolated in its
+      // own try/catch: if any of these reads fail, the baseline state 2 synced
+      // above remains correct (the user has drawn) instead of aborting the whole
+      // refresh and leaving the widget on its previous (often state-1) value.
+      try {
       // Already submitted — look at friends' drawings to pick state 2 vs 3.
       final friendIds = me?.friendIds ?? const <String>[];
       final List<PlayerRound> friendRounds = await firestore
@@ -129,32 +147,43 @@ class WidgetService {
       // `completed` drives the state 2->3 transition (have you finished guessing
       // everyone available, regardless of outcome). `correct` is the count shown
       // in the state-3 "you guessed X/Y correctly" summary.
+      final results = await Future.wait(
+        submitted.map((r) async {
+          final guess = await firestore
+              .watchGuess(date: today, guesserId: uid, drawerId: r.drawerId)
+              .first;
+          final name = await _displayName(firestore, r.drawerId);
+          return (round: r, guess: guess, name: name);
+        }),
+      );
+
       var completed = 0;
       var correct = 0;
       final friends = <WidgetFriend>[];
-      for (final r in submitted) {
-        final guess = await firestore
-            .watchGuess(date: today, guesserId: uid, drawerId: r.drawerId)
-            .first;
-        if (guess != null) {
+      for (final res in results) {
+        if (res.guess != null) {
           completed++;
-          if (guess.correct) correct++;
+          if (res.guess!.correct) correct++;
         }
         friends.add((
-          uid: r.drawerId,
-          name: await _displayName(firestore, r.drawerId),
-          thumbUrl: r.drawingUrl,
+          uid: res.round.drawerId,
+          name: res.name,
+          thumbUrl: res.round.drawingUrl,
           submitted: true,
         ));
       }
 
       // Also surface friends who haven't drawn yet as "waiting" entries.
       final submittedIds = submitted.map((r) => r.drawerId).toSet();
-      for (final id in friendIds) {
-        if (submittedIds.contains(id)) continue;
+      final waitingIds =
+          friendIds.where((id) => !submittedIds.contains(id)).toList();
+      final waitingNames = await Future.wait(
+        waitingIds.map((id) => _displayName(firestore, id)),
+      );
+      for (var i = 0; i < waitingIds.length; i++) {
         friends.add((
-          uid: id,
-          name: await _displayName(firestore, id),
+          uid: waitingIds[i],
+          name: waitingNames[i],
           thumbUrl: null,
           submitted: false,
         ));
@@ -172,6 +201,10 @@ class WidgetService {
         solved: correct,
         total: total,
       );
+      } catch (e, st) {
+        // Keep the baseline state 2 synced above; just log the enrichment loss.
+        debugPrint('WidgetService.refresh enrichment failed: $e\n$st');
+      }
     } catch (e, st) {
       debugPrint('WidgetService.refresh failed: $e\n$st');
     }

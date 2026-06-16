@@ -12,6 +12,54 @@ A daily Pictionary app — Flutter (Android-first), Firebase backend, with an An
 
 ## What was done last session
 
+### Quality pass — all bugs fixed ✅ (latest session)
+
+Full audit of all 25 Dart files + 5 TypeScript files. 9 issues found and fixed. `flutter analyze` clean (run locally to confirm — Flutter not in the CI sandbox). All on disk, **not committed**.
+
+**Fixes applied:**
+
+- **`lib/core/notifications/fcm_service.dart`** — Fixed memory leak: `onTokenRefresh` subscription now stored in `_tokenRefreshSub` and cancelled before reassigning on each sign-in. Removed dead `onMessage → debugPrint` no-op and its `flutter/foundation` import.
+
+- **`lib/app.dart`** — Moved `wireNotificationTaps` + `_wireWidgetTaps` from `build()` into `didChangeDependencies()` (side-effects don't belong in build). Added `unawaited(...)` to both the `_refreshWidget()` helper and the `ref.listen` callback's widget refresh call.
+
+- **`lib/features/word_selection/word_selection_screen.dart`** — "See friends' drawings" button changed from `context.push('/feed')` to `context.go('/feed')` so it switches tabs rather than stacking a duplicate route.
+
+- **`lib/services/widget_service.dart`** — Replaced sequential per-friend `await` loops with `Future.wait` — all guess lookups and display-name fetches now run in parallel.
+
+- **`lib/features/friends/friends_screen.dart`** — `_FriendTile` loading/error states now show "Loading…" / "Unknown" instead of raw Firestore UIDs.
+
+- **`functions/src/notifications.ts`** — `onGuessCorrect` now uses `send({token})` instead of `sendEachForMulticast({tokens:[token]})` for a single-recipient push.
+
+- **`pubspec.yaml`** — Removed unused `riverpod_annotation` (was in runtime deps), `build_runner`, and `riverpod_generator` (project uses hand-written providers; no code-gen).
+
+**Offline banner:** still deferred — `connectivity_plus` not in pubspec. Add later if desired.
+
+---
+
+### Phase 5 — Polish: implemented ✅
+
+Built by 4 parallel Sonnet agents overseen by Fable, then verified by manual code review. All on disk, **not committed**.
+
+**Files changed:**
+
+- **`lib/core/routing/app_router.dart`** — Added Material 3 `NavigationBar` (4 tabs: Home, Feed, Friends, Profile) via `ShellRoute` + `_AppShell`. Canvas, Guess, and Results push on top of the shell (no nav bar). Selected tab derived from URI path.
+
+- **`lib/core/providers.dart`** — Added `friendNamesProvider`: a `StreamProvider.autoDispose.family<Map<String, String>, List<String>>` that concurrently watches user docs for all given uids and emits a merged `{uid → displayName}` map. Falls back to the uid until the doc arrives.
+
+- **`lib/features/feed/feed_screen.dart`** — `_PlaceholderTile` and `_DrawingTile` now resolve display names via `friendNamesProvider` (no more raw uids in the UI). All `.when()` error branches replaced with `ErrorState(onRetry: ...)`.
+
+- **`lib/features/canvas/canvas_screen.dart`** — Word reminder banner below AppBar, confirm dialog before clear, submit button `ScaleTransition` (disabled/grey when canvas empty).
+
+- **`lib/features/guessing/guessing_screen.dart`** — "X attempts remaining" counter, sin-wave shake animation on wrong guess, green SnackBar + 1.5s delay on correct guess before navigating to feed. Error branches use `ErrorState`.
+
+- **`lib/features/word_selection/word_selection_screen.dart`** — `_WordCard` converted to `StatefulWidget` with bounce `TweenSequence` animation + selected state.
+
+- **`lib/features/friends/friends_screen.dart`**, **`lib/features/profile/profile_screen.dart`**, **`lib/features/results/results_screen.dart`** — All bare error text replaced with `ErrorState(onRetry: ...)`.
+
+- **`lib/widgets/error_state.dart`** *(new)* — Reusable error widget: error icon + message + optional "Try again" `FilledButton.tonal`.
+
+---
+
 ### Phase 1 — Foundation: scaffolded ✅
 
 All of these are written and committed to disk (not yet to git):
@@ -82,19 +130,49 @@ Built by the `pictionary-phase2` workflow (4 parallel implementers → `flutter 
 
 ---
 
-## What's still pending — manual setup (NEVER COMPLETED)
+## Manual setup — DONE ✅ (2026-06-14: Firebase connected, app runs on device)
 
-⚠️ The interactive Firebase/device setup from the original plan has **not** been done — `lib/firebase_options.dart` is still the placeholder that throws, and there's no `google-services.json`. **The app cannot run until these are completed.** They all need browser OAuth / console clicks / a physical device, so they can't be scripted from a Claude session.
+The interactive Firebase/device setup is now **complete**. The app boots on a physical Samsung (SM S928W), Google sign-in works, and the Phase 2 draw→submit→feed loop runs end-to-end.
 
-See [`next_steps.md`](./next_steps.md) for the full ordered, copy-pasteable checklist. High level:
+What got done this session:
+1. ✅ `firebase login` + Firebase project **`pictionary-widget`** created (Blaze plan); Auth (Google), Firestore, Storage, Functions, Messaging enabled.
+2. ✅ `firebase use --add` → `.firebaserc` now points at `pictionary-widget`.
+3. ✅ `flutterfire configure` → real `lib/firebase_options.dart` + `android/app/google-services.json` (the latter gitignored).
+4. ✅ `firebase deploy` — storage/firestore rules, indexes, and **all 5 functions** live (`dailyWordReset`, `addFriendByCode`, `onDrawingSubmitted`, `onGuessCorrect`, `onDrawingStreak`).
+5. ✅ Seeded today's `daily/{date}` words.
+6. ✅ Samsung connected via USB debugging; `flutter run` builds + installs.
+7. ✅ Signed in with Google, picked a word, drew, submitted → landed on feed.
 
-1. `firebase login` + create the Firebase project (Blaze plan) + enable Auth/Firestore/Storage/Functions/Messaging
-2. `firebase use --add`
-3. `flutterfire configure` (overwrites placeholder `lib/firebase_options.dart`, drops `google-services.json`)
-4. `firebase deploy --only firestore:rules,storage:rules,firestore:indexes,functions`
-5. Seed `daily/{today}` doc (or run `dailyWordReset` once from the console)
-6. Connect a Samsung (USB debugging) or create an emulator
-7. `flutter run`
+**Setup gotchas hit & resolved (so they don't bite again):**
+- `flutterfire` not on PATH after `dart pub global activate` → Pub Cache bin (`%LOCALAPPDATA%\Pub\Cache\bin`) added to user PATH; needs a fresh shell to take effect.
+- `firebase deploy --only ...,storage:rules,...` fails with "Could not find rules for storage targets: rules" — Storage uses **`storage`**, not `storage:rules` (Firestore keeps `:rules`/`:indexes`). **The `next_steps.md` START HERE / §3 commands still have this typo — fix when convenient.**
+- Storage needs a one-time **Get Started** click in the console before the first deploy.
+- First 2nd-gen functions deploy failed 3 Firestore-triggered functions with an Eventarc Service Agent permission error — **just wait a few minutes and re-run `firebase deploy --only functions`** (permissions propagate).
+- Google sign-in threw `PlatformException` until the **debug SHA-1** was added to the Firebase Android app and `google-services.json` re-downloaded. Debug SHA-1: `12:FD:7D:D9:74:3D:0F:0C:B4:46:28:3B:E7:F1:02:BE:52:BD:39:D3` (SHA-256 also added). A release SHA-1 will be needed for a signed/release build later.
+- Two `storage.rules` bugs fixed + redeployed (see "Known bugs" below and `next_steps.md`).
+
+⚠️ **Still NOT done on device:** Phase 3 (friend invites + push, needs a 2nd account) and Phase 4 (add the home-screen widget). See `next_steps.md` Phase 3 / Phase 4.
+
+---
+
+## Current git state (2026-06-14)
+
+Branch: **`feat/phases-2-4-game-social-widget`**.
+
+- **Committed this session** (`496fece`): `storage.rules` (2 fixes) + `next_steps.md` (bug log).
+- **Intentionally left UNCOMMITTED** (user wants to review/commit later) — ~19 modified + 2 untracked:
+  - Firebase wiring generated by setup: `.firebaserc`, `firebase.json`, `lib/firebase_options.dart`, `android/app/build.gradle.kts`, `android/settings.gradle.kts`.
+  - All the Phase 2–5 `lib/**` screens + `functions/src/notifications.ts` + `pubspec.yaml` + `handoff.md` (these were already uncommitted from prior sessions — the repo only ever had the initial scaffold committed).
+  - Untracked: `lib/widgets/` (contains `error_state.dart`), and **`flutter_01.png`** — a stray screenshot in the repo root that should be deleted or gitignored, **not** committed.
+- Reminder: `android/app/google-services.json` must stay **gitignored** (it is). `lib/firebase_options.dart` is safe to commit (client keys, not secrets).
+
+### Known bugs — ✅ ALL FIXED 2026-06-15 (code on disk, not committed; re-test on device)
+Fixed by the `fix-ondevice-bugs` workflow; `flutter analyze` clean. Details + per-file changes in `next_steps.md` → 🐛 Known bugs.
+- ~~**Home screen lets you draw twice/day.**~~ ✅ FIXED — `word_selection_screen.dart` now gates on the player's `hasSubmittedDrawing` (shows a "come back tomorrow" state); `firestore_service.chooseWord()` no longer clobbers the submit flag back to false.
+- ~~**Widget: tapping a word lands on home, not the canvas.**~~ ✅ FIXED — was a cold-start auth race; `app.dart` now defers the widget deep-link and replays it from the auth listener once the user is restored.
+- ~~**Widget stays on State 1 after you've drawn.**~~ ✅ FIXED — downstream of the `chooseWord` clobber; also hardened `widget_service.refresh()` so a friend-data enrichment failure can't strand the widget on State 1.
+
+Files changed: `lib/features/word_selection/word_selection_screen.dart`, `lib/core/firebase/firestore_service.dart`, `lib/app.dart`, `lib/services/widget_service.dart`. **Still need an on-device re-test** (original symptoms were seen on the phone).
 
 ---
 
@@ -152,11 +230,16 @@ Built by the `pictionary-phase4` workflow (native ‖ flutter implementers → a
 
 **Known followups (not blockers):** friend **thumbnails** aren't rendered yet — state 2 shows initials/placeholder + name (loading remote images into RemoteViews needs async bitmap fetching, deferred); confirm the state-3 tap route (`/results`) is the desired destination.
 
-### If the manual setup is NOT done
+### Where we actually are (resume here)
 
-Walk through `next_steps.md` §1–7 together first — the app can't boot otherwise. Likely sticking points:
-- Blaze plan upgrade (needs a credit card on Google Cloud Billing)
-- Samsung USB debugging not enabled / driver issue → check `adb devices` from `%LOCALAPPDATA%\Android\Sdk\platform-tools`
+Manual setup is **done** — the app runs on the Samsung and the Phase 2 loop works (see "Manual setup — DONE" above). Next, in priority order:
+
+1. ~~**Fix the "draw twice/day" bug**~~ ✅ DONE 2026-06-15 (all 3 on-device bugs fixed; see Known bugs). **Needs an on-device re-test.**
+2. **Phase 3 on device** — friend invites need a **second Google account**; then test the 3 push triggers on the real phone. See `next_steps.md` Phase 3.
+3. **Phase 4 on device** — add the home-screen widget, verify the 3 states + deep links. See `next_steps.md` Phase 4.
+4. **Commit the outstanding files** (review the ~19 modified + drop `flutter_01.png`) — see "Current git state".
+
+The feed is currently empty because there are no friends yet — expected; Phase 3 fills it.
 
 ---
 
@@ -164,9 +247,10 @@ Walk through `next_steps.md` §1–7 together first — the app can't boot other
 
 | Phase | Scope | Codeable by workflow? | Manual parts |
 |---|---|---|---|
-| **3 — Social & Notifications** | Friend invites, FCM (3 triggers), streak logic | ✅ **DONE** (`pictionary-phase3`) | deploy functions **+ rules**; test invites & push on a real device |
-| **4 — Home-Screen Widget** | Android `AppWidgetProvider`, 3 states, `home_widget` sync, deep links, refresh on FCM | ✅ **DONE** (`pictionary-phase4`) — code written + statically verified | build APK; add widget to home screen; verify 3 states + deep-link taps on device; (later) friend thumbnails |
-| **5 — Polish & iOS** | Animations, empty/error states, iOS build, TestFlight, APNs key | ⚠️ Dart polish yes; iOS/APNs no | Apple Developer acct, APNs key upload, TestFlight |
+| **3 — Social & Notifications** | Friend invites, FCM (3 triggers), streak logic | ✅ **DONE** | deploy functions **+ rules**; test invites & push on a real device |
+| **4 — Home-Screen Widget** | Android `AppWidgetProvider`, 3 states, `home_widget` sync, deep links, refresh on FCM | ✅ **DONE** — code written + statically verified | build APK; add widget to home screen; verify 3 states + deep-link taps on device; (later) friend thumbnails |
+| **5 — Polish & iOS (Dart)** | Bottom nav, friend name resolution, canvas/guessing UX, error states | ✅ **DONE** (this session) | Run `flutter analyze` locally to confirm clean; iOS build + APNs + TestFlight are all manual |
+| **Post-MVP** | iOS App Store submission, offline banner (`connectivity_plus`), friend thumbnails in widget (state 2), scoring/leaderboard | — | All manual or deferred |
 
 ### Friendly reminders for next session
 

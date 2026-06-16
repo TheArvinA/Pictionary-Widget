@@ -10,31 +10,58 @@ cd "C:\Projects\Pictionary Widget"
 
 ## ⭐ START HERE next session
 
-All code is written. You just need Firebase connected to run it. Do these in order:
+**Foundation is DONE as of 2026-06-14** — Firebase project `pictionary-widget` is live, the app runs on the Samsung, sign-in works, and the Phase 2 draw→submit→feed loop works on device. (Setup details + gotchas are in `handoff.md` → "Manual setup — DONE".)
 
-- [ ] `firebase login` → create Firebase project (Blaze plan) → enable Auth/Firestore/Storage/Functions/Messaging
-- [ ] `firebase use --add` (alias project as "default")
-- [ ] `dart pub global activate flutterfire_cli` then `flutterfire configure` — picks android, overwrites `lib/firebase_options.dart`, drops `android/app/google-services.json`
-- [ ] `firebase deploy --only firestore:rules,storage:rules,firestore:indexes,functions`
-- [ ] Firebase Console → Functions → `dailyWordReset` → Testing → Run test (seeds today's words)
-- [ ] Enable USB debugging on your phone, plug in, run `flutter devices` to confirm it shows up
-- [ ] `flutter run` — you should see the sign-in screen
+Pick up here, in order:
 
-Once the app boots, continue with the Phase 3 + 4 manual steps below (deploy functions, test notifications, add the home screen widget).
+1. [x] **Fix the "draw twice/day" bug** — ✅ FIXED 2026-06-15 (all 3 known bugs below). `flutter analyze` clean.
+2. [ ] **Phase 3 on device** — friend invites (needs a **2nd Google account**) + the 3 push triggers on the real phone. See Phase 3 section.
+3. [ ] **Phase 4 on device** — add the home-screen widget, verify 3 states + deep links. See Phase 4 section.
+4. [ ] **Commit the outstanding files** — see "Uncommitted files" below.
+
+<details><summary>Original foundation checklist (all ✅ done 2026-06-14)</summary>
+
+- [x] `firebase login` → create Firebase project (Blaze plan) → enable Auth/Firestore/Storage/Functions/Messaging
+- [x] `firebase use --add` (project `pictionary-widget`)
+- [x] `dart pub global activate flutterfire_cli` then `flutterfire configure`
+- [x] `firebase deploy` — rules, indexes, all 5 functions live
+- [x] Seeded today's words
+- [x] USB debugging on, `flutter run`
+- [x] Signed in, drew, submitted → feed
+
+</details>
 
 ---
 
-## 🐛 Known bugs to fix next session
+## 🐛 Known bugs — ✅ ALL FIXED 2026-06-15 (code only; re-verify on device)
 
-Found during the first on-device run (2026-06-14):
+Found during the first on-device run (2026-06-14); fixed 2026-06-15 by the `fix-ondevice-bugs` workflow (3 parallel investigators → single implementer → adversarial verify). `flutter analyze` clean. **On disk, not yet committed.** Still needs an on-device re-test (the original symptoms were observed on the phone).
 
-- [ ] **Home screen lets you draw again after you've already submitted today.** After submitting a drawing and pressing the home button, the word-selection screen shows the 3 word choices again and lets you draw a second time. You're only meant to draw once per UTC day.
-  - **Expected:** if the signed-in user already has a submission for today (`rounds/{today}/players/{uid}.hasSubmittedDrawing == true`), the home/word-selection screen should **not** show the word choices. Instead show their submitted drawing for the day (and/or a "You've drawn today — come back tomorrow" state), and route them to the feed.
-  - **Likely fix area:** the word-selection screen / router redirect logic (`lib/features/word_selection/word_selection_screen.dart`, `lib/core/routing/app_router.dart`) — add a check on the player doc's `hasSubmittedDrawing` before rendering word choices.
+Files changed: `lib/features/word_selection/word_selection_screen.dart`, `lib/core/firebase/firestore_service.dart`, `lib/app.dart`, `lib/services/widget_service.dart`.
+
+- [x] **Home screen lets you draw again after you've already submitted today.** ✅ FIXED. The root cause was twofold: (1) `WordSelectionScreen` never checked the player's round, and (2) `chooseWord()` merged `hasSubmittedDrawing: false`, so re-tapping a word *clobbered* an existing submission (re-locking anti-cheat reads + double-firing streak/notification triggers).
+  - **Fix:** added a `_myRoundProvider` (watches `watchPlayerRound(todayKey(), uid)`); when `hasSubmittedDrawing == true` the screen renders a "You've drawn today — come back tomorrow" state (with the submitted drawing + a button to `/feed`) instead of tappable word cards. `chooseWord()` no longer writes `hasSubmittedDrawing: false` (the flag still defaults false on first create), so a stray re-tap can never clobber a submission.
+
+- [x] **Widget: tapping a word opens the app to the home screen instead of the canvas for that word.** ✅ FIXED. Root cause: a **cold-start auth race** — the deep link was consumed in `didChangeDependencies` while `FirebaseAuth.currentUser` was still null, so the go_router redirect bounced it `/sign-in → /`, dropping the canvas target. (The native Kotlin route value was correct.)
+  - **Fix (`lib/app.dart`):** `_openFromWidget` now stores the route in `_pendingDeepLink` when `currentUser == null` and the `authStateChanges` listener replays it (post-frame, clear-before-navigate) once the user is restored. Warm taps are unchanged.
+
+- [x] **Widget still offers new words to draw after you've already drawn.** ✅ FIXED — was a downstream consequence of the `chooseWord` clobber above. Also hardened `widget_service.refresh()`: it now syncs a baseline State 2 right after detecting `hasSubmittedDrawing == true` and wraps the friend-data enrichment in its own try/catch, so an enrichment failure can no longer abort the whole refresh and strand the widget on State 1.
 
 ### Already fixed this session (for reference)
 - `storage.rules`: `{drawerId}.png` was invalid wildcard syntax → changed to `{fileName}` with `fileName == request.auth.uid + '.png'` checks.
-- `storage.rules`: read rule denied the owner reading their own freshly-uploaded drawing (the `getDownloadURL()` right after upload 403'd) → added an owner-can-always-read clause. **These rule edits are deployed but not yet committed to git.**
+- `storage.rules`: read rule denied the owner reading their own freshly-uploaded drawing (the `getDownloadURL()` right after upload 403'd) → added an owner-can-always-read clause.
+- Both `storage.rules` fixes are **deployed AND committed** (`496fece`), along with this file's bug log.
+
+### Uncommitted files (left for review — commit next session)
+Committed so far: only `storage.rules` + `next_steps.md` (`496fece`). Everything else from the Firebase setup + Phases 2–5 is **still uncommitted on `feat/phases-2-4-game-social-widget`**:
+- Firebase wiring: `.firebaserc`, `firebase.json`, `lib/firebase_options.dart`, `android/app/build.gradle.kts`, `android/settings.gradle.kts`
+- App code: all modified `lib/**` screens, `functions/src/notifications.ts`, `pubspec.yaml`, `handoff.md`
+- Untracked: `lib/widgets/` (`error_state.dart`) — should be committed; **`flutter_01.png`** (stray screenshot in repo root) — **delete or gitignore, do NOT commit**
+- Keep `android/app/google-services.json` **gitignored** (it is). `lib/firebase_options.dart` is fine to commit (client keys, not secrets).
+
+### ✏️ Doc fix for next time
+The START HERE / §3 deploy commands below still say `storage:rules` — that **errors**. For Storage use just `storage` (Firestore keeps `firestore:rules`/`firestore:indexes`). Correct form:
+`firebase deploy --only firestore:rules,storage,firestore:indexes,functions`
 
 ---
 

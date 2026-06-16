@@ -38,6 +38,12 @@ class FirestoreService {
             (snap) => snap.exists ? PlayerRound.fromFirestore(snap) : null,
           );
 
+  /// Records the chosen word for today's round. Must NOT touch
+  /// `hasSubmittedDrawing`: merging it as false would clobber an already-true
+  /// submission (re-locking feed/guessing/storage reads and double-firing the
+  /// streak/notification triggers). The flag defaults to false via
+  /// [PlayerRound.hasSubmittedDrawing] / the firestore rules treat an absent
+  /// field as not-submitted, so a brand-new round still starts not-submitted.
   Future<void> chooseWord({
     required String date,
     required String drawerId,
@@ -45,7 +51,6 @@ class FirestoreService {
   }) =>
       playerRoundRef(date: date, drawerId: drawerId).set({
         'chosenWord': word,
-        'hasSubmittedDrawing': false,
       }, SetOptions(merge: true));
 
   Future<void> submitDrawing({

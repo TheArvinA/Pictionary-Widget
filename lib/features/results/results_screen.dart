@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/util/today.dart';
 import '../../models/app_user.dart';
 import '../../models/player_round.dart';
+import '../../widgets/error_state.dart';
 
 final _userProvider = StreamProvider.autoDispose<AppUser?>((ref) {
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -44,7 +45,10 @@ class ResultsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text("Today's results")),
       body: user.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => ErrorState(
+          message: 'Something went wrong',
+          onRetry: () => ref.invalidate(_userProvider),
+        ),
         data: (appUser) {
           if (appUser == null) {
             return const Center(

@@ -42,13 +42,35 @@ class CanvasScreen extends ConsumerStatefulWidget {
   ConsumerState<CanvasScreen> createState() => _CanvasScreenState();
 }
 
-class _CanvasScreenState extends ConsumerState<CanvasScreen> {
+class _CanvasScreenState extends ConsumerState<CanvasScreen>
+    with SingleTickerProviderStateMixin {
   final GlobalKey _boundaryKey = GlobalKey();
   final List<DrawingStroke> _strokes = <DrawingStroke>[];
 
   Color _color = _palette.first;
   double _strokeWidth = 6;
   bool _uploading = false;
+
+  late final AnimationController _submitAnimController;
+  late final Animation<double> _submitScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _submitAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _submitScale = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(parent: _submitAnimController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _submitAnimController.dispose();
+    super.dispose();
+  }
 
   void _onPanStart(DragStartDetails details) {
     setState(() {
@@ -67,17 +89,43 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
   }
 
   void _onPanEnd(DragEndDetails details) {
-    // Stroke is complete; nothing further needed.
+    // Stroke is complete; animate the submit button in if first stroke.
+    if (_strokes.length == 1) {
+      _submitAnimController.forward();
+    }
   }
 
   void _undo() {
     if (_strokes.isEmpty) return;
-    setState(() => _strokes.removeLast());
+    setState(() {
+      _strokes.removeLast();
+      if (_strokes.isEmpty) _submitAnimController.reverse();
+    });
   }
 
-  void _clear() {
-    if (_strokes.isEmpty) return;
-    setState(_strokes.clear);
+  Future<void> _confirmClear() async {
+    if (_strokes.isEmpty || _uploading) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear canvas?'),
+        content: const Text('This will erase your entire drawing.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() => _strokes.clear());
+      _submitAnimController.reverse();
+    }
   }
 
   Future<void> _submit() async {
@@ -136,6 +184,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
   @override
   Widget build(BuildContext context) {
     final canSubmit = _strokes.isNotEmpty && !_uploading;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -149,12 +198,48 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: 'Clear',
-            onPressed: _uploading || _strokes.isEmpty ? null : _clear,
+            onPressed: _uploading || _strokes.isEmpty ? null : _confirmClear,
           ),
         ],
       ),
       body: Column(
         children: [
+          // Word reminder chip below AppBar
+          Material(
+            color: theme.colorScheme.secondaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline,
+                    size: 16,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Drawing: ',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  Chip(
+                    label: Text(
+                      widget.word,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                    backgroundColor: theme.colorScheme.secondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+            ),
+          ),
           Expanded(
             child: RepaintBoundary(
               key: _boundaryKey,
@@ -185,18 +270,21 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  icon: _uploading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check),
-                  label: Text(_uploading ? 'Submitting…' : 'Submit drawing'),
-                  onPressed: canSubmit ? _submit : null,
+              child: ScaleTransition(
+                scale: _submitScale,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: _uploading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: Text(_uploading ? 'Submitting…' : 'Submit drawing'),
+                    onPressed: canSubmit ? _submit : null,
+                  ),
                 ),
               ),
             ),
