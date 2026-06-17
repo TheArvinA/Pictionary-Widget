@@ -57,7 +57,7 @@ Committed so far: only `storage.rules` + `next_steps.md` (`496fece`). Everything
 - Firebase wiring: `.firebaserc`, `firebase.json`, `lib/firebase_options.dart`, `android/app/build.gradle.kts`, `android/settings.gradle.kts`
 - App code: all modified `lib/**` screens, `functions/src/notifications.ts`, `pubspec.yaml`, `handoff.md`
 - Untracked: `lib/widgets/` (`error_state.dart`) — should be committed; **`flutter_01.png`** (stray screenshot in repo root) — **delete or gitignore, do NOT commit**
-- Keep `android/app/google-services.json` **gitignored** (it is). `lib/firebase_options.dart` is fine to commit (client keys, not secrets).
+- Keep `android/app/google-services.json` **gitignored** (it is). **`lib/firebase_options.dart` is now gitignored too** (2026-06-17) — it was briefly committed with real keys, then purged from history; do not re-commit it. Regenerate via `flutterfire configure` on a fresh clone. **TODO (manual, you):** restrict/rotate the 2 Firebase API keys in the Google Cloud console (they were briefly public).
 
 ### ✏️ Doc fix for next time
 The START HERE / §3 deploy commands below still say `storage:rules` — that **errors**. For Storage use just `storage` (Firestore keeps `firestore:rules`/`firestore:indexes`). Correct form:
