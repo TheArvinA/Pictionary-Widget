@@ -9,6 +9,26 @@ const FALLBACK_WORDS = [
   'harmonica', 'jellyfish', 'skateboard', 'tornado', 'treehouse', 'violin',
   'campfire', 'compass', 'anchor', 'sandcastle', 'robot', 'spaceship',
   'dragon', 'wizard', 'knight', 'castle', 'unicorn', 'mermaid',
+  'apple', 'banana', 'carrot', 'guitar', 'piano', 'trumpet',
+  'elephant', 'giraffe', 'penguin', 'dolphin', 'butterfly', 'spider',
+  'snail', 'turtle', 'rabbit', 'squirrel', 'hedgehog', 'owl',
+  'tiger', 'lion', 'zebra', 'monkey', 'panda', 'koala',
+  'airplane', 'helicopter', 'rocket', 'tractor', 'bulldozer', 'sailboat',
+  'train', 'bus', 'truck', 'scooter', 'motorcycle', 'ambulance',
+  'mountain', 'island', 'waterfall', 'desert', 'forest', 'glacier',
+  'cactus', 'mushroom', 'sunflower', 'tree', 'leaf', 'acorn',
+  'house', 'igloo', 'tent', 'barn', 'bridge', 'tower',
+  'clock', 'lamp', 'chair', 'ladder', 'hammer', 'wrench',
+  'scissors', 'pencil', 'crayon', 'paintbrush', 'envelope', 'balloon',
+  'kite', 'drum', 'flute', 'bell', 'whistle', 'magnet',
+  'crown', 'glasses', 'hat', 'boot', 'glove', 'scarf',
+  'banjo', 'cello', 'xylophone', 'accordion', 'tambourine', 'trombone',
+  'snowman', 'pumpkin', 'cupcake', 'pizza', 'donut', 'pretzel',
+  'lemon', 'cherry', 'pineapple', 'strawberry', 'watermelon', 'coconut',
+  'starfish', 'seahorse', 'crab', 'lobster', 'shark', 'whale',
+  'cloud', 'lightning', 'snowflake', 'moon', 'star', 'planet',
+  'camera', 'feather', 'candle', 'mitten', 'rake', 'shovel',
+  'broom', 'bucket', 'kettle', 'teapot', 'spoon', 'fork',
 ];
 
 function todayUtc(): string {
@@ -19,10 +39,10 @@ function todayUtc(): string {
   return `${y}-${m}-${day}`;
 }
 
-function pickThree(words: string[]): string[] {
+function pickN(words: string[], n: number): string[] {
   const pool = [...words];
   const picked: string[] = [];
-  while (picked.length < 3 && pool.length > 0) {
+  while (picked.length < n && pool.length > 0) {
     const idx = Math.floor(Math.random() * pool.length);
     picked.push(pool.splice(idx, 1)[0]);
   }
@@ -41,14 +61,17 @@ export const dailyWordReset = onSchedule(
     const wordList = (masterSnap.data()?.words as string[] | undefined) ?? FALLBACK_WORDS;
 
     const date = todayUtc();
-    const choices = pickThree(wordList);
+    // Per-day candidate POOL (not the final 3). Each user picks a random
+    // 3-word subset from this pool, persisted to their private round doc, so
+    // friends rarely draw the same word.
+    const pool = pickN(wordList, 15);
 
     await db.doc(`daily/${date}`).set({
-      wordChoices: choices,
+      wordChoices: pool,
       generatedAt: FieldValue.serverTimestamp(),
     });
 
-    logger.info('Daily words written', { date, choices });
+    logger.info('Daily word pool written', { date, pool });
 
     await getMessaging().send({
       topic: 'daily',

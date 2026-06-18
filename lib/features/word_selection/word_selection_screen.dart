@@ -6,12 +6,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../core/util/today.dart';
-import '../../models/daily_words.dart';
 import '../../models/player_round.dart';
 import '../../widgets/error_state.dart';
 
-final _todayWordsProvider = StreamProvider.autoDispose<DailyWords?>((ref) {
-  return ref.watch(firestoreServiceProvider).watchDailyWords(todayKey());
+/// This user's personal 3-word subset for today, drawn from the shared daily
+/// pool and persisted to their private round doc (see
+/// [FirestoreService.ensureMyWords]). Each user gets a different subset so
+/// friends rarely draw the same word. Returns `const []` until the pool exists.
+final _todayWordsProvider =
+    FutureProvider.autoDispose<List<String>>((ref) async {
+  final uid = ref.watch(firebaseAuthProvider).currentUser?.uid;
+  if (uid == null) return const [];
+  return ref.watch(firestoreServiceProvider).ensureMyWords(
+        date: todayKey(),
+        drawerId: uid,
+      );
 });
 
 /// The signed-in user's round for today. Drives the anti-cheat gate: once the
@@ -59,7 +68,7 @@ class WordSelectionScreen extends ConsumerWidget {
           message: 'Something went wrong',
           onRetry: retry,
         ),
-        data: (daily) => myRound.when(
+        data: (words) => myRound.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => ErrorState(
             message: 'Something went wrong',
@@ -73,7 +82,7 @@ class WordSelectionScreen extends ConsumerWidget {
             if (round != null && round.hasSubmittedDrawing) {
               return _AlreadyDrawnState(drawingUrl: round.drawingUrl);
             }
-            if (daily == null || daily.wordChoices.isEmpty) {
+            if (words.isEmpty) {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -91,7 +100,7 @@ class WordSelectionScreen extends ConsumerWidget {
                 children: [
                   const Text('Pick one to draw:'),
                   const SizedBox(height: 16),
-                  for (final w in daily.wordChoices) ...[
+                  for (final w in words) ...[
                     _WordCard(
                       word: w,
                       onTap: () async {

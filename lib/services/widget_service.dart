@@ -100,8 +100,9 @@ class WidgetService {
 
       // State 1: haven't submitted a drawing yet — show the word choices.
       if (myRound == null || !myRound.hasSubmittedDrawing) {
-        final daily = await firestore.watchDailyWords(today).first;
-        final words = daily?.wordChoices ?? const <String>[];
+        // Per-user 3-word subset (self-seeded if the user hasn't opened the
+        // home screen yet), so the widget matches the app exactly.
+        final words = await firestore.ensureMyWords(date: today, drawerId: uid);
         await sync(
           state: 1,
           words: words.take(3).toList(),

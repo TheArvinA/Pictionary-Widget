@@ -65,6 +65,52 @@ flutter run                                         # rebuild — the guessing/r
 
 **⚠️ Data-migration gotcha (important for your current test accounts):** any round drawn *before* this change has its `chosenWord` in the **old** player-doc location, not the new private subdoc. After deploying, guessing such a drawing returns *"This drawing isn't ready to guess yet"* (the callable finds no word). To retest cleanly, **start fresh on each account**: in Firestore delete today's `rounds/{date}/players/{uid}` doc **and** its `private/round` subdoc (and the `rounds/{date}/guesses/{guesserId}_{drawerId}` docs), then re-pick a word → draw → submit. New rounds write the word to the private subdoc automatically.
 
+## 🗺️ Feedback backlog & roadmap — from on-device testing (2026-06-18)
+
+Guessing works end-to-end after the security deploy. New items found while testing, ordered **most → least important**. All are **code tasks** (codeable via workflows), separate from the manual device steps further down. Each notes the grounded root cause (for bugs), the recommended lightest approach, and a rough effort (S/M/L).
+
+### P1 — 🐛 CRITICAL: every user gets the SAME 3 words (per-user word selection)
+- **Symptom:** both accounts see the same 3 word choices, so two friends often draw the same word → guessing is pointless.
+- **Cause (confirmed):** `functions/src/dailyReset.ts` writes ONE shared `daily/{date}.wordChoices`; `word_selection_screen.dart` reads that same doc for everyone.
+- **Fix (server-authoritative, fits the private-word model):** new callable `getMyWords({date})` → on first call per user/day, pick 3 random words from `wordList/master`, store them in the owner-only private round doc (`rounds/{date}/players/{uid}/private/round.wordChoices`), and return them. **Idempotent** — returns the stored set on later calls so words can't be re-rolled for easier ones. `word_selection_screen` calls it instead of reading `daily/{date}`. Widget State-1 reads the per-user words (owner-readable private doc). Keep `dailyReset` only for the daily "new words" push / pool refresh; the shared `daily/{date}` doc can be retired.
+- **Also:** expand `wordList/master` to 100+ words (currently ~30 fallback) so all-3 collisions are rare. Pure-random from a large pool makes "all 3 identical" very unlikely; strict per-friend-group uniqueness is a harder constraint — optional later.
+- **Touches:** new `functions/src/getMyWords.ts` + `index.ts`, `functions_service.dart`, `firestore_service.dart`, `word_selection_screen.dart`, `widget_service.dart`. **Effort: M.**
+
+### P2 — 🐛 CRITICAL: widget "guess" opens Home instead of the feed/guess screen
+- **Symptom:** tapping a friend (or "see all") in the widget foregrounds the app at Home, not the guess/feed screen.
+- **Cause (grounded):** `MainActivity` is a bare `FlutterActivity` with no `onNewIntent` override. On a **warm** relaunch (app already running) Android delivers the widget deep-link as a *new intent* to the existing activity, but `home_widget` only captures the launch intent on create — so `HomeWidget.widgetClicked` never fires and the app just resumes at its last route (Home). The cold-start path (fixed earlier) works; warm doesn't.
+- **Fix:** override `onNewIntent` in `MainActivity` to forward the intent to `HomeWidgetPlugin` (the documented warm-launch hook) so `widgetClicked` fires and `app.dart` `_openFromWidget` navigates. Friend rows already carry `/guess/{uid}` — verify.
+- **Touches:** `MainActivity.kt` (+ maybe manifest `launchMode`). **Effort: S.**
+
+### P3 — 🐛/UX: feed should show WHOSE drawing it is + a guessed indicator
+- **Symptom:** with many friends you can't tell whose drawing is whose (the name is only a hidden long-press `Tooltip`), and there's no sign you've already guessed one.
+- **Fix:** (a) show the drawer's display name as a visible caption on each tile (already resolved via `friendNamesProvider`); (b) per tile, watch your guess (`watchGuess(date, uid, drawerId)`) and overlay a badge bottom-right: green ✓ (correct), red ✗ (finished, wrong), none (not yet guessed).
+- **Touches:** `feed_screen.dart` (UI only; providers already exist). **Effort: S–M.**
+
+### P4 — ✨ Hint button in guessing (QoL — the "too hard / exact-match" pain)
+- **Symptom:** exact word in 3 tries is hard ("rocket"/"rocketship" ≠ "spaceship").
+- **Fix:** a "Hint" button revealing progressive hints — **letter count** (hangman blanks) and/or **first letter**. Word is now server-only, so hints come from the server: have the guess flow (`submitGuess` or a small `getGuessContext`) return `wordLength` (cheap; show blanks) and a `firstLetter` on explicit Hint tap. Keep exact-match validation; **do NOT** add fuzzy matching (false-positive risk).
+- **Touches:** the words/guess callable, `guessing_screen.dart`. **Effort: S–M.** Synergizes with P1 (same callable surface).
+
+### P5 — ✨ Widget: show friends' actual drawing thumbnails (known Phase-4 deferral)
+- **Symptom:** widget State 2 lists friends with initials/placeholder, not their drawings.
+- **Fix:** RemoteViews can't load network images directly — fetch each friend's PNG to a Bitmap natively (`setImageViewBitmap`, e.g. via coroutine/Glide) in `PictionaryWidgetProvider`, or pre-download in Flutter and pass local file paths.
+- **Touches:** `PictionaryWidgetProvider.kt` (native bitmap fetch), maybe `widget_service.dart`. **Effort: M.**
+
+### P6 — ✨ Home (after submitting): "who guessed your drawing today"
+- **Symptom:** want a list of friends who guessed your word, with their guesses / #tries / pass-fail.
+- **Fix:** on the post-submit Home state, query `rounds/{date}/guesses where drawerId == uid` (rules already let the drawer read these). Show each guesser (name via `friendNamesProvider`), correct/failed, `solvedOnAttempt`. Add a Firestore composite index on `guesses` (drawerId).
+- **Touches:** `word_selection_screen.dart` ("you've drawn today" state), `firestore_service.dart`, `firestore.indexes.json`. **Effort: M.**
+
+### P7 — ✨ Profile: Wordle-style lifetime stats
+- **Symptom:** want total correct/incorrect + a distribution of wins in 1 / 2 / 3 tries.
+- **Fix:** maintain a per-user stats doc updated **server-side** by the `submitGuess` callable on the finishing transition (increment `totalCorrect`/`totalIncorrect` + a `[1,2,3]`-try histogram; guard double-count via the existing idempotent finished-branch). Profile reads & renders it. Server-side aggregation avoids scanning every guess doc.
+- **Touches:** `submitGuess.ts`, `profile_screen.dart`, a stats model/field. **Effort: M.** Synergizes with P6 (both about guess outcomes).
+
+**Suggested batching:** P1+P4 share the words/guess callable surface; P6+P7 share guess-outcome data (P7's stats can be written by the same `submitGuess` finishing path). P2 and P3 are independent and quick. Recommended order: **P1 → P2 → P3 → P4 → P5 → P6 → P7** (bugs first, then high-value QoL, then features).
+
+---
+
 ### Already fixed this session (for reference)
 - `storage.rules`: `{drawerId}.png` was invalid wildcard syntax → changed to `{fileName}` with `fileName == request.auth.uid + '.png'` checks.
 - `storage.rules`: read rule denied the owner reading their own freshly-uploaded drawing (the `getDownloadURL()` right after upload 403'd) → added an owner-can-always-read clause.

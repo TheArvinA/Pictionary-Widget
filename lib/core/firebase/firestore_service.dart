@@ -24,6 +24,39 @@ class FirestoreService {
             (snap) => snap.exists ? DailyWords.fromFirestore(snap) : null,
           );
 
+  /// Returns this user's personal 3-word subset for [date], chosen randomly
+  /// from the shared daily pool and persisted (idempotently) to their
+  /// owner-only private round doc. Giving each user a different subset means
+  /// friends rarely draw the same word, so guessing stays meaningful. The app
+  /// and the home-screen widget both call this, so they always agree.
+  ///
+  /// Returns `const []` when the pool isn't ready yet. Never reshuffles: once a
+  /// valid 3-word selection exists in the private doc it's returned unchanged.
+  Future<List<String>> ensureMyWords({
+    required String date,
+    required String drawerId,
+  }) async {
+    final daily = await watchDailyWords(date).first;
+    final pool = daily?.wordChoices ?? const <String>[];
+    if (pool.isEmpty) return const [];
+
+    final ref = privateRoundRef(date: date, drawerId: drawerId);
+    return _db.runTransaction<List<String>>((tx) async {
+      final snap = await tx.get(ref);
+      final existing = snap.data()?['wordChoices'];
+      if (existing is List &&
+          existing.length == 3 &&
+          existing.every((e) => e is String)) {
+        return existing.cast<String>();
+      }
+
+      final shuffled = [...pool]..shuffle(math.Random());
+      final picked = shuffled.take(3).toList();
+      tx.set(ref, {'wordChoices': picked}, SetOptions(merge: true));
+      return picked;
+    });
+  }
+
   DocumentReference<Map<String, dynamic>> playerRoundRef({
     required String date,
     required String drawerId,
