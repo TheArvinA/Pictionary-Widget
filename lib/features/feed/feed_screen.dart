@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers.dart';
 import '../../core/util/today.dart';
 import '../../models/app_user.dart';
+import '../../models/guess.dart';
 import '../../models/player_round.dart';
 import '../../widgets/error_state.dart';
 
@@ -34,6 +35,20 @@ final _friendDrawingsProvider =
         );
   },
 );
+
+// Your guess (if any) for a given friend's drawing today — drives the
+// correct/incorrect badge on each tile. Reading a not-yet-created guess doc is
+// allowed by firestore.rules (resource == null), so this never 403s.
+final _myGuessProvider =
+    StreamProvider.autoDispose.family<Guess?, String>((ref, drawerId) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return Stream.value(null);
+  return ref.watch(firestoreServiceProvider).watchGuess(
+        date: todayKey(),
+        guesserId: uid,
+        drawerId: drawerId,
+      );
+});
 
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
@@ -168,7 +183,7 @@ class _FriendsFeed extends ConsumerWidget {
   }
 }
 
-class _DrawingTile extends StatelessWidget {
+class _DrawingTile extends ConsumerWidget {
   const _DrawingTile({
     required this.friendId,
     required this.friendName,
@@ -179,23 +194,83 @@ class _DrawingTile extends StatelessWidget {
   final String drawingUrl;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final guess = ref.watch(_myGuessProvider(friendId)).valueOrNull;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Tooltip(
-        message: friendName,
-        child: InkWell(
-          onTap: () => context.push('/guess/$friendId'),
-          child: CachedNetworkImage(
-          imageUrl: drawingUrl,
-          fit: BoxFit.cover,
-          placeholder: (context, url) =>
-              const Center(child: CircularProgressIndicator()),
-          errorWidget: (context, url, error) =>
-              const Center(child: Icon(Icons.broken_image_outlined)),
-          ),
+      child: InkWell(
+        onTap: () => context.push('/guess/$friendId'),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedNetworkImage(
+              imageUrl: drawingUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) =>
+                  const Center(child: CircularProgressIndicator()),
+              errorWidget: (context, url, error) =>
+                  const Center(child: Icon(Icons.broken_image_outlined)),
+            ),
+            // Bottom scrim: drawer's name (left) + your guess result (right),
+            // so you can tell whose drawing it is and whether you've solved it.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black54, Colors.transparent],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        friendName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    _GuessBadge(guess: guess),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// Small status badge for the feed tile: green check once you've guessed the
+/// drawing correctly, red X once you're out of attempts without solving it, and
+/// nothing while you haven't finished (so the tile stays tappable to keep going).
+class _GuessBadge extends StatelessWidget {
+  const _GuessBadge({required this.guess});
+  final Guess? guess;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = guess;
+    if (g == null) return const SizedBox.shrink();
+    // completedAt is set by the submitGuess callable only when the round is
+    // finished (solved or out of attempts).
+    final finished = g.correct || g.completedAt != null;
+    if (!finished) return const SizedBox.shrink();
+    return Icon(
+      g.correct ? Icons.check_circle : Icons.cancel,
+      color: g.correct ? Colors.green : Colors.red,
+      size: 22,
     );
   }
 }

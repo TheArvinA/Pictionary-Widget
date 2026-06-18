@@ -82,7 +82,8 @@ Guessing works end-to-end after the security deploy. New items found while testi
 - **Fix:** override `onNewIntent` in `MainActivity` to forward the intent to `HomeWidgetPlugin` (the documented warm-launch hook) so `widgetClicked` fires and `app.dart` `_openFromWidget` navigates. Friend rows already carry `/guess/{uid}` — verify.
 - **Touches:** `MainActivity.kt` (+ maybe manifest `launchMode`). **Effort: S.**
 
-### P3 — 🐛/UX: feed should show WHOSE drawing it is + a guessed indicator
+### P3 — ✅ DONE 2026-06-18 (rebuild to see): feed shows whose drawing + a guessed indicator
+Implemented in `feed_screen.dart`: each tile now has a bottom scrim with the drawer's name (left) and a status badge (right) — green ✓ once you've guessed it correctly, red ✗ once you're out of attempts, nothing while unfinished. Uses a `_myGuessProvider` (your guess per drawer via `watchGuess`). `flutter analyze` clean. Just needs `flutter run`.
 - **Symptom:** with many friends you can't tell whose drawing is whose (the name is only a hidden long-press `Tooltip`), and there's no sign you've already guessed one.
 - **Fix:** (a) show the drawer's display name as a visible caption on each tile (already resolved via `friendNamesProvider`); (b) per tile, watch your guess (`watchGuess(date, uid, drawerId)`) and overlay a badge bottom-right: green ✓ (correct), red ✗ (finished, wrong), none (not yet guessed).
 - **Touches:** `feed_screen.dart` (UI only; providers already exist). **Effort: S–M.**
