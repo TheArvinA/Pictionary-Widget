@@ -197,4 +197,20 @@ class FirestoreService {
       guessRef(date: date, guesserId: guesserId, drawerId: drawerId)
           .snapshots()
           .map((snap) => snap.exists ? Guess.fromFirestore(snap) : null);
+
+  /// Streams every guess made against [drawerId]'s drawing for [date], so the
+  /// drawer can see who's guessing their drawing and how they did. firestore.rules
+  /// allows the drawer to read guesses where `drawerId` == them; the single-field
+  /// equality filter is served by Firestore's automatic index (no composite needed).
+  Stream<List<Guess>> watchGuessesForDrawer({
+    required String date,
+    required String drawerId,
+  }) =>
+      _db
+          .collection('rounds')
+          .doc(date)
+          .collection('guesses')
+          .where('drawerId', isEqualTo: drawerId)
+          .snapshots()
+          .map((qs) => qs.docs.map(Guess.fromFirestore).toList());
 }

@@ -57,6 +57,29 @@ class FunctionsService {
     }
   }
 
+  /// Fetches a server-side hint for the drawer's secret word via the
+  /// `getGuessHint` callable. The word lives in an owner-only Firestore
+  /// location, so only its length and first letter are ever returned.
+  Future<({int wordLength, String firstLetter})> getGuessHint({
+    required String date,
+    required String drawerId,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('getGuessHint');
+      final result = await callable.call<Map<String, dynamic>>({
+        'date': date,
+        'drawerId': drawerId,
+      });
+      final data = result.data;
+      return (
+        wordLength: (data['wordLength'] as num?)?.toInt() ?? 0,
+        firstLetter: (data['firstLetter'] as String?) ?? '',
+      );
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(_messageFor(e));
+    }
+  }
+
   String _messageFor(FirebaseFunctionsException e) {
     switch (e.code) {
       case 'not-found':

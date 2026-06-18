@@ -42,6 +42,17 @@ final _existingGuessProvider =
       );
 });
 
+/// Server-side hint context for the drawer's secret word (length + first
+/// letter). The word is owner-only, so the hint can only come from the
+/// `getGuessHint` callable. Fetched once per drawer and cached.
+final _hintProvider = FutureProvider.autoDispose
+    .family<({int wordLength, String firstLetter}), String>((ref, drawerId) {
+  return ref.watch(functionsServiceProvider).getGuessHint(
+        date: todayKey(),
+        drawerId: drawerId,
+      );
+});
+
 class GuessingScreen extends ConsumerStatefulWidget {
   const GuessingScreen({super.key, required this.drawerId});
   final String drawerId;
@@ -59,6 +70,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
   String? _revealedWord;
   bool _submitting = false;
   bool _seeded = false;
+  bool _hintRevealed = false;
 
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
@@ -270,10 +282,89 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildHint(theme),
             _buildAttempts(theme),
             const SizedBox(height: 16),
             _buildResultOrInput(context),
           ],
+        );
+      },
+    );
+  }
+
+  /// A hangman-style hint row showing the word length as underscores, plus a
+  /// free one-time "Hint" button that reveals the first letter. Hints come
+  /// from the server (the word is owner-only). On error the row is hidden so
+  /// guessing is never blocked.
+  Widget _buildHint(ThemeData theme) {
+    final hint = ref.watch(_hintProvider(widget.drawerId));
+
+    return hint.when(
+      // Subtle placeholder while loading; never blocks guessing.
+      loading: () => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Loading hint…',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+      // On error just hide the hint row.
+      error: (_, __) => const SizedBox.shrink(),
+      data: (h) {
+        if (h.wordLength <= 0) return const SizedBox.shrink();
+
+        final slots = <Widget>[];
+        for (var i = 0; i < h.wordLength; i++) {
+          final revealed = _hintRevealed && i == 0;
+          slots.add(
+            Text(
+              revealed && h.firstLetter.isNotEmpty ? h.firstLetter : '_',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: revealed
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          );
+        }
+
+        final canReveal = !_hintRevealed && h.firstLetter.isNotEmpty;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 10,
+                runSpacing: 4,
+                children: slots,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${h.wordLength} letter${h.wordLength == 1 ? '' : 's'}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (canReveal)
+                    TextButton.icon(
+                      icon: const Icon(Icons.lightbulb_outline, size: 18),
+                      label: const Text('Hint'),
+                      onPressed: () => setState(() => _hintRevealed = true),
+                    ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );

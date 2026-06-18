@@ -88,20 +88,32 @@ Implemented in `feed_screen.dart`: each tile now has a bottom scrim with the dra
 - **Fix:** (a) show the drawer's display name as a visible caption on each tile (already resolved via `friendNamesProvider`); (b) per tile, watch your guess (`watchGuess(date, uid, drawerId)`) and overlay a badge bottom-right: green ✓ (correct), red ✗ (finished, wrong), none (not yet guessed).
 - **Touches:** `feed_screen.dart` (UI only; providers already exist). **Effort: S–M.**
 
+### P4 — ✅ DONE 2026-06-18 (⚠️ deploy + rebuild): hint button in guessing
+New `getGuessHint` callable returns `{wordLength, firstLetter}` (word stays server-only). The guessing screen shows hangman-style blanks for the length + a one-time free "Hint" button revealing the first letter. Exact-match unchanged (no fuzzy matching). `flutter analyze` + `tsc` clean. **Activate:** `firebase deploy --only functions` + `flutter run`.
+
+<details><summary>original P4 spec</summary>
+
 ### P4 — ✨ Hint button in guessing (QoL — the "too hard / exact-match" pain)
 - **Symptom:** exact word in 3 tries is hard ("rocket"/"rocketship" ≠ "spaceship").
 - **Fix:** a "Hint" button revealing progressive hints — **letter count** (hangman blanks) and/or **first letter**. Word is now server-only, so hints come from the server: have the guess flow (`submitGuess` or a small `getGuessContext`) return `wordLength` (cheap; show blanks) and a `firstLetter` on explicit Hint tap. Keep exact-match validation; **do NOT** add fuzzy matching (false-positive risk).
 - **Touches:** the words/guess callable, `guessing_screen.dart`. **Effort: S–M.** Synergizes with P1 (same callable surface).
+
+</details>
 
 ### P5 — ✨ Widget: show friends' actual drawing thumbnails (known Phase-4 deferral)
 - **Symptom:** widget State 2 lists friends with initials/placeholder, not their drawings.
 - **Fix:** RemoteViews can't load network images directly — fetch each friend's PNG to a Bitmap natively (`setImageViewBitmap`, e.g. via coroutine/Glide) in `PictionaryWidgetProvider`, or pre-download in Flutter and pass local file paths.
 - **Touches:** `PictionaryWidgetProvider.kt` (native bitmap fetch), maybe `widget_service.dart`. **Effort: M.**
 
-### P6 — ✨ Home (after submitting): "who guessed your drawing today"
+### P6 — ✅ DONE 2026-06-18 (rebuild only): Home shows "who guessed your drawing today"
+`watchGuessesForDrawer` (drawer reads `guesses where drawerId == self` — rules already allow it; single-field auto-index, **no index change**). The post-submit Home state now lists each guesser (name via `friendNamesProvider`) with ✓ "guessed in N" / ✗ "didn't get it" / "guessing…", inside a scroll view. `flutter analyze` clean. Dart-only — just `flutter run` (no deploy).
+
+<details><summary>original P6 spec</summary>
 - **Symptom:** want a list of friends who guessed your word, with their guesses / #tries / pass-fail.
 - **Fix:** on the post-submit Home state, query `rounds/{date}/guesses where drawerId == uid` (rules already let the drawer read these). Show each guesser (name via `friendNamesProvider`), correct/failed, `solvedOnAttempt`. Add a Firestore composite index on `guesses` (drawerId).
 - **Touches:** `word_selection_screen.dart` ("you've drawn today" state), `firestore_service.dart`, `firestore.indexes.json`. **Effort: M.**
+
+</details>
 
 ### P7 — ✨ Profile: Wordle-style lifetime stats
 - **Symptom:** want total correct/incorrect + a distribution of wins in 1 / 2 / 3 tries.
