@@ -28,23 +28,39 @@ export const onDrawingSubmitted = onDocumentWritten(
     }
 
     const drawerId = event.params.drawerId;
+    const date = event.params.date;
     const db = getFirestore();
-    const drawerSnap = await db.doc(`users/${drawerId}`).get();
-    const drawerData = drawerSnap.data();
-    if (!drawerData) {
-      logger.warn('Drawer user doc missing', { drawerId });
-      return;
-    }
+    const drawerRef = db.doc(`users/${drawerId}`);
 
-    const drawerName = asString(drawerData.displayName) ?? 'A friend';
-    const friendIds = Array.isArray(drawerData.friendIds)
-      ? (drawerData.friendIds as unknown[]).filter(
-          (id): id is string => typeof id === 'string',
-        )
-      : [];
-    if (friendIds.length === 0) {
+    // Idempotency claim (mirrors streak.ts): toggling hasSubmittedDrawing
+    // false->true could otherwise re-fire this trigger and spam the multicast.
+    // Claim the day in a transaction; bail if already notified today. Reuse the
+    // same snapshot for the drawer's name/friendIds to avoid a duplicate read.
+    const claim = await db.runTransaction(async (tx) => {
+      const drawerSnap = await tx.get(drawerRef);
+      const drawerData = drawerSnap.data();
+      if (!drawerData) {
+        logger.warn('Drawer user doc missing', { drawerId });
+        return null;
+      }
+      if (drawerData.lastDrawingNotifiedDate === date) {
+        return null;
+      }
+      tx.update(drawerRef, { lastDrawingNotifiedDate: date });
+      const friendIds = Array.isArray(drawerData.friendIds)
+        ? (drawerData.friendIds as unknown[]).filter(
+            (id): id is string => typeof id === 'string',
+          )
+        : [];
+      return {
+        drawerName: asString(drawerData.displayName) ?? 'A friend',
+        friendIds,
+      };
+    });
+    if (!claim || claim.friendIds.length === 0) {
       return;
     }
+    const { drawerName, friendIds } = claim;
 
     const tokens: string[] = [];
     const friendSnaps = await db.getAll(
@@ -91,7 +107,6 @@ export const onGuessCorrect = onDocumentWritten(
       return;
     }
 
-    const date = event.params.date;
     const guessId = event.params.guessId;
     const drawerId = asString(after?.drawerId);
     const guesserId = asString(after?.guesserId);
@@ -100,11 +115,10 @@ export const onGuessCorrect = onDocumentWritten(
       return;
     }
 
-    // Defense against forged guesses: the client self-asserts `correct`, so do
-    // NOT trust it. Verify the doc identity and re-check correctness against the
-    // drawer's real round before notifying anyone. Otherwise an attacker could
-    // write a guess doc with correct:true and an arbitrary drawerId to spam
-    // "X guessed your drawing!" pushes at any user.
+    // Guesses are now admin-written only by the submitGuess callable, which
+    // already validated correctness against the drawer's secret word. We keep
+    // the identity checks so a (hypothetical) malformed doc can't aim a
+    // "X guessed your drawing!" push at an arbitrary victim.
     if (guessId !== `${guesserId}_${drawerId}`) {
       logger.warn('Guess id does not match its guesserId/drawerId', { guessId });
       return;
@@ -114,30 +128,6 @@ export const onGuessCorrect = onDocumentWritten(
     }
 
     const db = getFirestore();
-    const roundSnap = await db.doc(`rounds/${date}/players/${drawerId}`).get();
-    const round = roundSnap.data();
-    const chosenWord = asString(round?.chosenWord);
-    if (!asBool(round?.hasSubmittedDrawing) || !chosenWord) {
-      logger.warn('Guess targets a drawer with no submitted drawing', {
-        guessId,
-      });
-      return;
-    }
-
-    const attempts = Array.isArray(after?.attempts)
-      ? (after?.attempts as unknown[]).filter(
-          (a): a is string => typeof a === 'string',
-        )
-      : [];
-    const norm = (s: string): string => s.trim().toLowerCase();
-    const actuallyCorrect = attempts.some((a) => norm(a) === norm(chosenWord));
-    if (!actuallyCorrect) {
-      logger.warn('Guess marked correct but no attempt matches chosenWord', {
-        guessId,
-      });
-      return;
-    }
-
     const drawerSnap = await db.doc(`users/${drawerId}`).get();
     const token = asString(drawerSnap.data()?.fcmToken);
     if (!token) {

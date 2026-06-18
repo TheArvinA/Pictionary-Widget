@@ -47,6 +47,24 @@ Files changed: `lib/features/word_selection/word_selection_screen.dart`, `lib/co
 
 - [x] **Widget still offers new words to draw after you've already drawn.** ✅ FIXED — was a downstream consequence of the `chooseWord` clobber above. Also hardened `widget_service.refresh()`: it now syncs a baseline State 2 right after detecting `hasSubmittedDrawing == true` and wraps the friend-data enrichment in its own try/catch, so an enrichment failure can no longer abort the whole refresh and strand the widget on State 1.
 
+## 🔒 Security-review fixes — code done 2026-06-17 (⚠️ DEPLOY + REBUILD required)
+
+Fixed by the `fix-security-findings` workflow (single implementer → adversarial verify; `flutter analyze` + `tsc` clean, verdict **ship**). On disk, **not yet committed/deployed**. These came from the `review-overlooked` audit (`review-findings.md`).
+
+- **#1 (HIGH) — the secret word was readable from Firestore → guessing was trivially cheatable.** `chosenWord` now lives in an **owner-only private subdoc** (`rounds/{date}/players/{uid}/private/round`); the friend-readable player doc no longer holds it. Guesses are validated by a **new `submitGuess` Cloud Function** (callable) — it reads the word via the admin SDK, enforces the 3-attempt cap + idempotency + normalized compare server-side, and reveals the word only when you finish. Firestore rules now lock guess docs to `allow write: if false` (callable-only), which also closes the earlier forgery/tampering vectors.
+- **#2 (DO) — dead code.** Removed the unused `toFirestore()` methods from `AppUser`, `PlayerRound`, `Guess`.
+- **#3 (MEDIUM) — notification spam.** `onDrawingSubmitted` now claims `lastDrawingNotifiedDate` in a transaction (mirrors the streak fn), so toggling submit can't re-fire the push.
+
+Files: `firestore.rules`, `functions/src/{submitGuess.ts (new),index.ts,notifications.ts}`, `lib/core/firebase/{firestore_service,functions_service}.dart`, `lib/models/{player_round,guess,app_user}.dart`, `lib/features/guessing/guessing_screen.dart`, `lib/features/results/results_screen.dart`.
+
+**To activate (do BEFORE retesting guessing/widget):**
+```powershell
+firebase deploy --only firestore:rules,functions   # publishes the new submitGuess callable + locked guess rules
+flutter run                                         # rebuild — the guessing/results screens + models changed
+```
+
+**⚠️ Data-migration gotcha (important for your current test accounts):** any round drawn *before* this change has its `chosenWord` in the **old** player-doc location, not the new private subdoc. After deploying, guessing such a drawing returns *"This drawing isn't ready to guess yet"* (the callable finds no word). To retest cleanly, **start fresh on each account**: in Firestore delete today's `rounds/{date}/players/{uid}` doc **and** its `private/round` subdoc (and the `rounds/{date}/guesses/{guesserId}_{drawerId}` docs), then re-pick a word → draw → submit. New rounds write the word to the private subdoc automatically.
+
 ### Already fixed this session (for reference)
 - `storage.rules`: `{drawerId}.png` was invalid wildcard syntax → changed to `{fileName}` with `fileName == request.auth.uid + '.png'` checks.
 - `storage.rules`: read rule denied the owner reading their own freshly-uploaded drawing (the `getDownloadURL()` right after upload 403'd) → added an owner-can-always-read clause.

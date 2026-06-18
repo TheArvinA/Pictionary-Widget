@@ -34,14 +34,4 @@ class AppUser {
       lastPlayedDate: data['lastPlayedDate'] as String?,
     );
   }
-
-  Map<String, dynamic> toFirestore() => {
-        'displayName': displayName,
-        'photoUrl': photoUrl,
-        'fcmToken': fcmToken,
-        'inviteCode': inviteCode,
-        'friendIds': friendIds,
-        'streakCount': streakCount,
-        'lastPlayedDate': lastPlayedDate,
-      };
 }

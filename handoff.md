@@ -174,6 +174,21 @@ Fixed by the `fix-ondevice-bugs` workflow; `flutter analyze` clean. Details + pe
 
 Files changed: `lib/features/word_selection/word_selection_screen.dart`, `lib/core/firebase/firestore_service.dart`, `lib/app.dart`, `lib/services/widget_service.dart`. **Still need an on-device re-test** (original symptoms were seen on the phone).
 
+### Two-account testing fixes — 2026-06-17 (deployed via rules; rebuild for invite code)
+Found while testing with two accounts. Both fixed:
+- **Guessing showed "something went wrong" under the drawing + empty widget friends.** Root cause: the `firestore.rules` guesses *read* rule dereferenced `resource.data` on a not-yet-created guess doc → `PERMISSION_DENIED`. Fixed by allowing `resource == null` reads. **Server-side — `firebase deploy --only firestore:rules` activates it; no rebuild needed.**
+- **2nd account had no invite code.** `auth_service._ensureUserDoc` only set `inviteCode` on first creation; now it **backfills** `inviteCode`/`friendIds`/`streakCount` on existing docs (needs a rebuild + re-sign-in, or add the field manually in Firestore).
+
+### Security-review fixes — 2026-06-17 ✅ (code done; ⚠️ DEPLOY + REBUILD required before retesting)
+From the `review-overlooked` audit (see `review-findings.md`); applied by the `fix-security-findings` workflow, `flutter analyze` + `tsc` clean, adversarial verify verdict **ship**. Scope = all HIGH/MEDIUM **security** findings + all `DO` recommendations.
+- **#1 (HIGH): secret word was world-readable → guessing was cheatable.** `chosenWord` moved to an owner-only private subdoc (`rounds/{date}/players/{uid}/private/round`); a new **`submitGuess` callable** validates guesses server-side (3-attempt cap, idempotency, normalized compare, reveals the word only on finish). Guess docs are now `allow write: if false` (callable-only) — closes the forgery/tampering vectors too.
+- **#2 (DO):** removed dead `toFirestore()` from `AppUser`/`PlayerRound`/`Guess`.
+- **#3 (MEDIUM):** `onDrawingSubmitted` notification now claims `lastDrawingNotifiedDate` transactionally → no spam re-fire.
+
+Deploy with `firebase deploy --only firestore:rules,functions` **and** `flutter run` (Dart changed). **Migration gotcha:** rounds drawn before this change keep the word in the old player-doc location, so guessing them returns "not ready" — start a fresh round per account (delete today's `players/{uid}` doc + its `private/round` subdoc + the `guesses/*` docs, then re-pick→draw→submit). Details in `next_steps.md` → 🔒 Security-review fixes.
+
+Out of scope (intentionally not done): low-severity security findings (#10 guess-update tampering — now moot since guesses are callable-only; #11 wide `users` read rule) and all non-security `consider` items. See `review-findings.md`.
+
 ---
 
 ## Where to pick up next session

@@ -56,6 +56,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
   final List<String> _attempts = [];
   bool _correct = false;
   int? _solvedOnAttempt;
+  String? _revealedWord;
   bool _submitting = false;
   bool _seeded = false;
 
@@ -86,50 +87,39 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
 
   String _normalize(String s) => s.trim().toLowerCase();
 
-  Future<void> _submitGuess(String chosenWord) async {
-    final raw = _controller.text;
-    if (_normalize(raw).isEmpty || _finished || _submitting) return;
-
-    final isCorrect = _normalize(raw) == _normalize(chosenWord);
-
-    if (!isCorrect) {
-      // Shake animation on wrong guess, then clear and update state.
-      await _shakeController.forward(from: 0);
-      _shakeController.reset();
-      setState(() {
-        _attempts.add(raw.trim());
-        _controller.clear();
-      });
-    } else {
-      setState(() {
-        _attempts.add(raw.trim());
-        _controller.clear();
-        _correct = true;
-        _solvedOnAttempt = _attempts.length;
-      });
-    }
-
-    if (_finished) {
-      await _recordResult(isCorrect: isCorrect);
-    }
-  }
-
-  Future<void> _recordResult({required bool isCorrect}) async {
+  /// Submits the guess to the server, which holds the secret word and decides
+  /// correctness. The client never sees the word until the round is finished
+  /// (solved or out of attempts), when the server returns `revealedWord`.
+  Future<void> _submitGuess() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    final raw = _controller.text;
+    if (uid == null || _normalize(raw).isEmpty || _finished || _submitting) {
+      return;
+    }
 
     setState(() => _submitting = true);
-    final guess = Guess(
-      guesserId: uid,
-      drawerId: widget.drawerId,
-      attempts: List<String>.from(_attempts),
-      correct: _correct,
-      solvedOnAttempt: _solvedOnAttempt,
-    );
     try {
-      await ref
-          .read(firestoreServiceProvider)
-          .recordGuess(date: todayKey(), guess: guess);
+      final res = await ref.read(functionsServiceProvider).submitGuess(
+            date: todayKey(),
+            drawerId: widget.drawerId,
+            guess: raw.trim(),
+          );
+
+      if (!res.correct) {
+        // Shake animation on wrong guess, then clear and update state.
+        await _shakeController.forward(from: 0);
+        _shakeController.reset();
+      }
+      if (!mounted) return;
+      setState(() {
+        _controller.clear();
+        _attempts
+          ..clear()
+          ..addAll(res.attempts);
+        _correct = res.correct;
+        _solvedOnAttempt = res.solvedOnAttempt;
+        if (res.finished) _revealedWord = res.revealedWord;
+      });
 
       // Reflect the new solved/total (and possible state 3) on the widget.
       unawaited(ref.read(widgetServiceProvider).refresh(
@@ -137,7 +127,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
             uid: uid,
           ));
 
-      if (isCorrect && mounted) {
+      if (res.correct && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.green.shade600,
@@ -221,7 +211,6 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
           );
         }
 
-        final chosenWord = pr.chosenWord;
         final theme = Theme.of(context);
 
         return SingleChildScrollView(
@@ -244,13 +233,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
                 ),
               ),
               const SizedBox(height: 24),
-              if (chosenWord == null)
-                const Text(
-                  "This drawing isn't ready to guess yet.",
-                  textAlign: TextAlign.center,
-                )
-              else
-                _buildGuessSection(context, theme, chosenWord),
+              _buildGuessSection(context, theme),
             ],
           ),
         );
@@ -260,13 +243,9 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
 
   /// Seeds local attempt state from any previously-recorded guess so the
   /// 3-attempt cap (and a finished result) survives leaving and re-entering
-  /// the screen. recordGuess() overwrites the doc, so without this a user
-  /// could re-enter and clobber a completed guess with a fresh set of tries.
-  Widget _buildGuessSection(
-    BuildContext context,
-    ThemeData theme,
-    String chosenWord,
-  ) {
+  /// the screen. Restores `revealedWord` too, so re-entry after a finished
+  /// round still shows the "the word was X" reveal.
+  Widget _buildGuessSection(BuildContext context, ThemeData theme) {
     final existing = ref.watch(_existingGuessProvider(widget.drawerId));
 
     return existing.when(
@@ -285,6 +264,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
               ..addAll(saved.attempts);
             _correct = saved.correct;
             _solvedOnAttempt = saved.solvedOnAttempt;
+            _revealedWord = saved.revealedWord;
           }
         }
         return Column(
@@ -292,7 +272,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
           children: [
             _buildAttempts(theme),
             const SizedBox(height: 16),
-            _buildResultOrInput(context, chosenWord),
+            _buildResultOrInput(context),
           ],
         );
       },
@@ -331,7 +311,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
     );
   }
 
-  Widget _buildResultOrInput(BuildContext context, String chosenWord) {
+  Widget _buildResultOrInput(BuildContext context) {
     final theme = Theme.of(context);
 
     if (_correct) {
@@ -369,12 +349,14 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
                 'Out of attempts!',
                 style: theme.textTheme.titleMedium,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'The word was "$chosenWord".',
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
+              if (_revealedWord != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'The word was "$_revealedWord".',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),
@@ -416,7 +398,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
                   labelText: 'Your guess',
                   border: OutlineInputBorder(),
                 ),
-                onSubmitted: (_) => _submitGuess(chosenWord),
+                onSubmitted: (_) => _submitGuess(),
               ),
             ],
           ),
@@ -431,7 +413,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
                 )
               : const Icon(Icons.send),
           label: const Text('Submit guess'),
-          onPressed: _submitting ? null : () => _submitGuess(chosenWord),
+          onPressed: _submitting ? null : () => _submitGuess(),
         ),
       ],
     );

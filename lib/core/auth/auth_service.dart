@@ -48,10 +48,20 @@ class AuthService {
     final ref = _firestore.collection('users').doc(user.uid);
     final snap = await ref.get();
     if (snap.exists) {
-      await ref.update({
-        'displayName': user.displayName ?? snap.data()?['displayName'] ?? 'Player',
+      final data = snap.data() ?? const <String, dynamic>{};
+      final updates = <String, dynamic>{
+        'displayName': user.displayName ?? data['displayName'] ?? 'Player',
         'photoUrl': user.photoURL,
-      });
+      };
+      // Backfill required fields for docs created before they existed (e.g. an
+      // account that signed in on an older build never got an invite code).
+      final code = data['inviteCode'];
+      if (code is! String || code.isEmpty) {
+        updates['inviteCode'] = _generateInviteCode();
+      }
+      if (data['friendIds'] is! List) updates['friendIds'] = <String>[];
+      if (data['streakCount'] is! num) updates['streakCount'] = 0;
+      await ref.update(updates);
       return;
     }
     await ref.set({

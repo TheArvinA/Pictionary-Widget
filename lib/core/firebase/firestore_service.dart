@@ -30,6 +30,18 @@ class FirestoreService {
   }) =>
       _db.collection('rounds').doc(date).collection('players').doc(drawerId);
 
+  /// Owner-only doc holding the drawer's secret word. Lives under the player
+  /// doc but in a `private` subcollection that firestore.rules locks to the
+  /// owner, so guessers can't read the answer. The submitGuess callable reads
+  /// it via the admin SDK to validate guesses server-side.
+  DocumentReference<Map<String, dynamic>> privateRoundRef({
+    required String date,
+    required String drawerId,
+  }) =>
+      playerRoundRef(date: date, drawerId: drawerId)
+          .collection('private')
+          .doc('round');
+
   Stream<PlayerRound?> watchPlayerRound({
     required String date,
     required String drawerId,
@@ -38,20 +50,28 @@ class FirestoreService {
             (snap) => snap.exists ? PlayerRound.fromFirestore(snap) : null,
           );
 
-  /// Records the chosen word for today's round. Must NOT touch
-  /// `hasSubmittedDrawing`: merging it as false would clobber an already-true
-  /// submission (re-locking feed/guessing/storage reads and double-firing the
-  /// streak/notification triggers). The flag defaults to false via
-  /// [PlayerRound.hasSubmittedDrawing] / the firestore rules treat an absent
-  /// field as not-submitted, so a brand-new round still starts not-submitted.
+  /// Records the chosen word for today's round into the owner-only private
+  /// doc, never the player doc (which is readable by friends once a drawing is
+  /// submitted). An orphan private doc with no parent player doc is fine in
+  /// Firestore; the player doc is created later by [submitDrawing].
   Future<void> chooseWord({
     required String date,
     required String drawerId,
     required String word,
   }) =>
-      playerRoundRef(date: date, drawerId: drawerId).set({
+      privateRoundRef(date: date, drawerId: drawerId).set({
         'chosenWord': word,
       }, SetOptions(merge: true));
+
+  /// Streams the owner's own secret word from their private round doc. Only the
+  /// owner may read it per firestore.rules; used by the owner's results screen.
+  Stream<String?> watchMyChosenWord({
+    required String date,
+    required String drawerId,
+  }) =>
+      privateRoundRef(date: date, drawerId: drawerId).snapshots().map(
+            (snap) => snap.data()?['chosenWord'] as String?,
+          );
 
   Future<void> submitDrawing({
     required String date,
@@ -144,17 +164,4 @@ class FirestoreService {
       guessRef(date: date, guesserId: guesserId, drawerId: drawerId)
           .snapshots()
           .map((snap) => snap.exists ? Guess.fromFirestore(snap) : null);
-
-  Future<void> recordGuess({
-    required String date,
-    required Guess guess,
-  }) =>
-      guessRef(
-        date: date,
-        guesserId: guess.guesserId,
-        drawerId: guess.drawerId,
-      ).set({
-        ...guess.toFirestore(),
-        'completedAt': FieldValue.serverTimestamp(),
-      });
 }

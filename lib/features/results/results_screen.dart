@@ -24,6 +24,16 @@ final _selfRoundProvider = StreamProvider.autoDispose<PlayerRound?>((ref) {
       );
 });
 
+// The owner can read their own secret word from its owner-only private doc.
+final _myWordProvider = StreamProvider.autoDispose<String?>((ref) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return Stream.value(null);
+  return ref.watch(firestoreServiceProvider).watchMyChosenWord(
+        date: todayKey(),
+        drawerId: uid,
+      );
+});
+
 final _friendDrawingsProvider =
     StreamProvider.autoDispose.family<List<PlayerRound>, List<String>>(
   (ref, friendIds) {
@@ -111,15 +121,18 @@ class _ResultsBody extends ConsumerWidget {
                       value: 'unavailable',
                     ),
                     data: (round) {
-                      final word = round?.chosenWord;
                       final submitted = round?.hasSubmittedDrawing ?? false;
+                      final word = ref.watch(_myWordProvider);
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _SummaryRow(
                             icon: Icons.brush,
                             label: 'Your word',
-                            value: word ?? 'not picked',
+                            value: word.maybeWhen(
+                              data: (w) => w ?? 'not picked',
+                              orElse: () => '…',
+                            ),
                           ),
                           const SizedBox(height: 16),
                           _SummaryRow(

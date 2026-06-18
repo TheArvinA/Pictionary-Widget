@@ -31,26 +31,27 @@ service cloud.firestore {
       allow read: if isSelf(drawerId) || hasSubmittedDrawing(date);
       allow create, update: if isSelf(drawerId);
       allow delete: if false;
+
+      // The drawer's secret word lives here, readable/writable only by its
+      // owner. The submitGuess callable reads it via the admin SDK (rules
+      // don't apply to admin), so guessers never see the answer.
+      match /private/{doc} {
+        allow read, write: if isSelf(drawerId);
+      }
     }
 
     match /rounds/{date}/guesses/{guessId} {
+      // `resource == null` allows a `get` on a not-yet-created guess doc
+      // (returns empty), so the guessing screen and the widget can check
+      // "have I guessed this friend yet?" without a PERMISSION_DENIED. Once
+      // the doc exists, only its guesser or drawer may read it.
       allow read: if isSignedIn()
-        && (request.auth.uid == resource.data.guesserId
+        && (resource == null
+            || request.auth.uid == resource.data.guesserId
             || request.auth.uid == resource.data.drawerId);
-      // The doc id must be "<guesserId>_<drawerId>", the guesser must be the
-      // caller, and you can't guess your own drawing. This ties drawerId to the
-      // id so a guess can't be aimed at an arbitrary victim; the onGuessCorrect
-      // function still re-verifies `correct` server-side against chosenWord.
-      allow create: if isSignedIn()
-        && request.resource.data.guesserId == request.auth.uid
-        && request.resource.data.drawerId != request.auth.uid
-        && guessId == request.resource.data.guesserId + '_' + request.resource.data.drawerId
-        && hasSubmittedDrawing(date);
-      allow update: if isSignedIn()
-        && resource.data.guesserId == request.auth.uid
-        && request.resource.data.guesserId == resource.data.guesserId
-        && request.resource.data.drawerId == resource.data.drawerId;
-      allow delete: if false;
+      // Guesses are written ONLY by the submitGuess callable (admin SDK), which
+      // validates correctness server-side, so clients can't create/forge/tamper.
+      allow write: if false;
     }
 
     match /wordList/{docId} {

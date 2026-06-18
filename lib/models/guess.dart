@@ -6,6 +6,7 @@ class Guess {
   final List<String> attempts;
   final bool correct;
   final int? solvedOnAttempt;
+  final String? revealedWord;
   final DateTime? completedAt;
 
   const Guess({
@@ -14,6 +15,7 @@ class Guess {
     this.attempts = const [],
     this.correct = false,
     this.solvedOnAttempt,
+    this.revealedWord,
     this.completedAt,
   });
 
@@ -28,17 +30,8 @@ class Guess {
       attempts: List<String>.from(data['attempts'] as List? ?? const []),
       correct: (data['correct'] as bool?) ?? false,
       solvedOnAttempt: (data['solvedOnAttempt'] as num?)?.toInt(),
+      revealedWord: data['revealedWord'] as String?,
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
     );
   }
-
-  Map<String, dynamic> toFirestore() => {
-        'guesserId': guesserId,
-        'drawerId': drawerId,
-        'attempts': attempts,
-        'correct': correct,
-        'solvedOnAttempt': solvedOnAttempt,
-        if (completedAt != null)
-          'completedAt': Timestamp.fromDate(completedAt!),
-      };
 }
