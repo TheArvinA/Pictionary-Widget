@@ -94,7 +94,8 @@ export const submitGuess = onCall<SubmitGuessData, Promise<SubmitGuessResult>>(
     const solvedOnAttempt = correct ? newAttempts.length : existingSolvedOnAttempt;
     const finished = correct || newAttempts.length >= MAX_ATTEMPTS;
 
-    await guessRef.set({
+    const batch = db.batch();
+    batch.set(guessRef, {
       guesserId: callerUid,
       drawerId,
       attempts: newAttempts,
@@ -103,6 +104,26 @@ export const submitGuess = onCall<SubmitGuessData, Promise<SubmitGuessResult>>(
       completedAt: finished ? FieldValue.serverTimestamp() : null,
       revealedWord: finished ? chosenWord : null,
     });
+
+    // Lifetime guessing stats: increment the guesser's totals exactly once,
+    // on the finishing transition (this append makes the guess finished).
+    if (finished) {
+      const guessStats: Record<string, FirebaseFirestore.FieldValue> = correct
+        ? {
+            correct: FieldValue.increment(1),
+            [`win${solvedOnAttempt}`]: FieldValue.increment(1),
+          }
+        : {
+            failed: FieldValue.increment(1),
+          };
+      batch.set(
+        db.doc(`users/${callerUid}`),
+        { guessStats },
+        { merge: true },
+      );
+    }
+
+    await batch.commit();
 
     return {
       correct,

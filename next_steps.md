@@ -115,10 +115,17 @@ New `getGuessHint` callable returns `{wordLength, firstLetter}` (word stays serv
 
 </details>
 
-### P7 — ✨ Profile: Wordle-style lifetime stats
+### P7 — ✅ DONE 2026-06-18 (⚠️ deploy + rebuild): profile Wordle-style stats
+`submitGuess` now increments the guesser's `users/{uid}.guessStats` (correct / failed / win1·win2·win3) **exactly once on the finishing transition** via a `WriteBatch` + `FieldValue.increment`. `AppUser` parses `guessStats`; the profile shows total correct/missed + a 1/2/3-try win distribution (zero-state when empty). Stats accrue going forward only (past guesses aren't backfilled). `flutter analyze` + `tsc` clean. **Activate:** `firebase deploy --only functions` + `flutter run`.
+
+> Also fixed (2026-06-18): the P6 "who guessed your drawing" list was showing raw UIDs — `friendNamesProvider` is `List`-keyed and a fresh list each build kept it stuck in loading. Replaced with a stable per-uid `_guesserNameProvider` (String key). Dart-only.
+
+<details><summary>original P7 spec</summary>
 - **Symptom:** want total correct/incorrect + a distribution of wins in 1 / 2 / 3 tries.
 - **Fix:** maintain a per-user stats doc updated **server-side** by the `submitGuess` callable on the finishing transition (increment `totalCorrect`/`totalIncorrect` + a `[1,2,3]`-try histogram; guard double-count via the existing idempotent finished-branch). Profile reads & renders it. Server-side aggregation avoids scanning every guess doc.
 - **Touches:** `submitGuess.ts`, `profile_screen.dart`, a stats model/field. **Effort: M.** Synergizes with P6 (both about guess outcomes).
+
+</details>
 
 **Suggested batching:** P1+P4 share the words/guess callable surface; P6+P7 share guess-outcome data (P7's stats can be written by the same `submitGuess` finishing path). P2 and P3 are independent and quick. Recommended order: **P1 → P2 → P3 → P4 → P5 → P6 → P7** (bugs first, then high-value QoL, then features).
 

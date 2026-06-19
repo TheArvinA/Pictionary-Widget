@@ -47,6 +47,17 @@ final _guessesForMeProvider = StreamProvider.autoDispose<List<Guess>>((ref) {
       );
 });
 
+/// Resolves a single guesser's display name. String-keyed (stable) so each row
+/// gets its own cached provider instance — unlike a List-keyed family, which
+/// uses identity equality and would respawn (stuck loading) on every rebuild.
+final _guesserNameProvider =
+    StreamProvider.autoDispose.family<String, String>((ref, uid) {
+  return ref
+      .watch(firestoreServiceProvider)
+      .watchUser(uid)
+      .map((u) => u?.displayName ?? uid);
+});
+
 class WordSelectionScreen extends ConsumerWidget {
   const WordSelectionScreen({super.key});
 
@@ -207,8 +218,8 @@ class _AlreadyDrawnState extends StatelessWidget {
 }
 
 /// Lists everyone who has guessed the signed-in user's drawing today and how
-/// they did. Resolves guesser display names via [friendNamesProvider], exactly
-/// like the friends' feed does.
+/// they did. Each row resolves its own guesser's display name via the
+/// string-keyed [_guesserNameProvider].
 class _GuessersSection extends ConsumerWidget {
   const _GuessersSection();
 
@@ -247,16 +258,11 @@ class _GuessersSection extends ConsumerWidget {
                 style: theme.textTheme.bodyMedium,
               );
             }
-            final guesserIds = <String>{
-              for (final g in list) g.guesserId,
-            }.toList();
-            final names = ref.watch(friendNamesProvider(guesserIds));
-            final nameMap = names.valueOrNull ?? const <String, String>{};
             return Column(
               children: [
                 for (final g in list)
                   _GuesserRow(
-                    name: nameMap[g.guesserId] ?? g.guesserId,
+                    guesserId: g.guesserId,
                     guess: g,
                   ),
               ],
@@ -269,16 +275,18 @@ class _GuessersSection extends ConsumerWidget {
 }
 
 /// A single guesser row: their name plus how they did against this drawing.
-class _GuesserRow extends StatelessWidget {
-  const _GuesserRow({required this.name, required this.guess});
+class _GuesserRow extends ConsumerWidget {
+  const _GuesserRow({required this.guesserId, required this.guess});
 
-  final String name;
+  final String guesserId;
   final Guess guess;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final nameAsync = ref.watch(_guesserNameProvider(guesserId));
+    final name = nameAsync.valueOrNull ?? guesserId;
 
     Widget status;
     if (guess.correct) {
