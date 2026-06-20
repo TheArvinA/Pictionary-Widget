@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Explicit colors so the widget stays readable on light AND dark home screens.
+         Do NOT use theme attributes here; they don't resolve inside RemoteViews. -->
+    <color name="widget_background">#FF1E1E2E</color>
+    <color name="widget_cell">#FF2E2E44</color>
+    <color name="widget_accent">#FF7C6CFF</color>
+    <color name="widget_accent_dim">#FF4A4070</color>
+    <color name="widget_text_primary">#FFF5F5FA</color>
+    <color name="widget_text_secondary">#FFB8B8C8</color>
+    <color name="widget_text_muted">#FF8A8AA0</color>
+</resources>

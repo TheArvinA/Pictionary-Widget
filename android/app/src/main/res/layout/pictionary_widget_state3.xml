@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/state3_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_background"
+    android:padding="@dimen/widget_padding">
+
+    <TextView
+        android:id="@+id/streak_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/widget_accent"
+        android:textSize="@dimen/widget_streak_text"
+        android:textStyle="bold"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/streak_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_streak_label"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="@dimen/widget_status_text"
+        android:textAllCaps="true"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/day_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/widget_text_primary"
+        android:textSize="@dimen/widget_body_text"
+        android:textStyle="bold"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/summary_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="@dimen/widget_status_text"
+        android:gravity="center"
+        android:maxLines="2"
+        android:ellipsize="end" />
+</LinearLayout>

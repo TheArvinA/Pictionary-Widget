@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/state2_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="@dimen/widget_padding">
+
+    <TextView
+        android:id="@+id/state2_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_title_guess"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="@dimen/widget_title_text"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:paddingBottom="@dimen/widget_row_spacing" />
+
+    <!-- Friend row 1 -->
+    <LinearLayout
+        android:id="@+id/friend_row_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/widget_cell_background"
+        android:padding="6dp"
+        android:layout_marginBottom="@dimen/widget_row_spacing">
+
+        <ImageView
+            android:id="@+id/friend_thumb_1"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/widget_thumb_desc"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/friend_initial_1"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:background="@drawable/widget_initial_background"
+            android:gravity="center"
+            android:textColor="@color/widget_text_primary"
+            android:textStyle="bold"
+            android:textSize="@dimen/widget_body_text" />
+
+        <TextView
+            android:id="@+id/friend_name_1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="@dimen/widget_body_text"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/friend_status_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/widget_accent"
+            android:textSize="@dimen/widget_status_text" />
+    </LinearLayout>
+
+    <!-- Friend row 2 -->
+    <LinearLayout
+        android:id="@+id/friend_row_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/widget_cell_background"
+        android:padding="6dp"
+        android:layout_marginBottom="@dimen/widget_row_spacing">
+
+        <ImageView
+            android:id="@+id/friend_thumb_2"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/widget_thumb_desc"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/friend_initial_2"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:background="@drawable/widget_initial_background"
+            android:gravity="center"
+            android:textColor="@color/widget_text_primary"
+            android:textStyle="bold"
+            android:textSize="@dimen/widget_body_text" />
+
+        <TextView
+            android:id="@+id/friend_name_2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="@dimen/widget_body_text"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/friend_status_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/widget_accent"
+            android:textSize="@dimen/widget_status_text" />
+    </LinearLayout>
+
+    <!-- Friend row 3 -->
+    <LinearLayout
+        android:id="@+id/friend_row_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/widget_cell_background"
+        android:padding="6dp"
+        android:layout_marginBottom="@dimen/widget_row_spacing">
+
+        <ImageView
+            android:id="@+id/friend_thumb_3"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/widget_thumb_desc"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/friend_initial_3"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:background="@drawable/widget_initial_background"
+            android:gravity="center"
+            android:textColor="@color/widget_text_primary"
+            android:textStyle="bold"
+            android:textSize="@dimen/widget_body_text" />
+
+        <TextView
+            android:id="@+id/friend_name_3"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="@dimen/widget_body_text"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/friend_status_3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/widget_accent"
+            android:textSize="@dimen/widget_status_text" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/see_all"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="@string/widget_see_all"
+        android:textColor="@color/widget_text_muted"
+        android:textSize="@dimen/widget_status_text"
+        android:gravity="center" />
+</LinearLayout>

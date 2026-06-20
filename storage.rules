@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /rounds/{date}/{fileName} {
+      allow read: if isSignedIn()
+        && (
+          // Owner can always read their own drawing (e.g. fetching the URL right
+          // after upload, before the Firestore submission doc is written).
+          fileName == request.auth.uid + '.png'
+          // Everyone else may read a drawing only once they've drawn today.
+          || (
+            firestore.exists(/databases/(default)/documents/rounds/$(date)/players/$(request.auth.uid))
+            && firestore.get(/databases/(default)/documents/rounds/$(date)/players/$(request.auth.uid)).data.hasSubmittedDrawing == true
+          )
+        );
+
+      allow write: if isSignedIn()
+        && fileName == request.auth.uid + '.png'
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType == 'image/png';
+    }
+  }
+}
