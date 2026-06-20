@@ -30,6 +30,14 @@
         android:padding="6dp"
         android:layout_marginBottom="@dimen/widget_row_spacing">
 
+        <ImageView
+            android:id="@+id/friend_thumb_1"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/widget_thumb_desc"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/friend_initial_1"
             android:layout_width="@dimen/widget_initial_size"
@@ -72,6 +80,14 @@
         android:padding="6dp"
         android:layout_marginBottom="@dimen/widget_row_spacing">
 
+        <ImageView
+            android:id="@+id/friend_thumb_2"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/widget_thumb_desc"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/friend_initial_2"
             android:layout_width="@dimen/widget_initial_size"
@@ -113,6 +129,14 @@
         android:background="@drawable/widget_cell_background"
         android:padding="6dp"
         android:layout_marginBottom="@dimen/widget_row_spacing">
+
+        <ImageView
+            android:id="@+id/friend_thumb_3"
+            android:layout_width="@dimen/widget_initial_size"
+            android:layout_height="@dimen/widget_initial_size"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/widget_thumb_desc"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/friend_initial_3"

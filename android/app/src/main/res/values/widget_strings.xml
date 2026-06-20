@@ -4,6 +4,7 @@
     <string name="widget_title_guess">Guess your friends</string>
     <string name="widget_see_all">See all in feed</string>
     <string name="widget_guess">Tap to guess</string>
+    <string name="widget_thumb_desc">Friend\'s drawing</string>
     <string name="widget_waiting">Waiting…</string>
     <string name="widget_streak_label">Day streak</string>
     <!-- %1$d = day number -->

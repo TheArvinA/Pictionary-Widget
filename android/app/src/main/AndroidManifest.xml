@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The home-screen widget fetches friends' drawing thumbnails over HTTPS.
+         Flutter only declares INTERNET in the debug manifest, so it must be in
+         the main manifest too or release/profile builds can't load them. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="pictionary_app"
         android:name="${applicationName}"
