@@ -70,7 +70,9 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
   String? _revealedWord;
   bool _submitting = false;
   bool _seeded = false;
-  bool _hintRevealed = false;
+  // Progressive hint level: 0 = not requested, 1 = word length revealed,
+  // 2 = first letter revealed.
+  int _hintLevel = 0;
 
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
@@ -297,6 +299,24 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
   /// from the server (the word is owner-only). On error the row is hidden so
   /// guessing is never blocked.
   Widget _buildHint(ThemeData theme) {
+    // Progressive hints, nothing revealed until asked: 1st tap reveals the word
+    // length (blanks), 2nd tap reveals the first letter. The word stays
+    // server-only; getGuessHint supplies length + first letter and is only
+    // called once the player requests a hint (level >= 1).
+    if (_hintLevel == 0) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            icon: const Icon(Icons.lightbulb_outline, size: 18),
+            label: const Text('Stuck? Get a hint'),
+            onPressed: () => setState(() => _hintLevel = 1),
+          ),
+        ),
+      );
+    }
+
     final hint = ref.watch(_hintProvider(widget.drawerId));
 
     return hint.when(
@@ -320,10 +340,11 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
 
         final slots = <Widget>[];
         for (var i = 0; i < h.wordLength; i++) {
-          final revealed = _hintRevealed && i == 0;
+          final revealed =
+              _hintLevel >= 2 && i == 0 && h.firstLetter.isNotEmpty;
           slots.add(
             Text(
-              revealed && h.firstLetter.isNotEmpty ? h.firstLetter : '_',
+              revealed ? h.firstLetter : '_',
               style: theme.textTheme.titleLarge?.copyWith(
                 color: revealed
                     ? theme.colorScheme.primary
@@ -333,7 +354,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
           );
         }
 
-        final canReveal = !_hintRevealed && h.firstLetter.isNotEmpty;
+        final canRevealLetter = _hintLevel < 2 && h.firstLetter.isNotEmpty;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
@@ -355,11 +376,11 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (canReveal)
+                  if (canRevealLetter)
                     TextButton.icon(
                       icon: const Icon(Icons.lightbulb_outline, size: 18),
-                      label: const Text('Hint'),
-                      onPressed: () => setState(() => _hintRevealed = true),
+                      label: const Text('Hint: first letter'),
+                      onPressed: () => setState(() => _hintLevel = 2),
                     ),
                 ],
               ),

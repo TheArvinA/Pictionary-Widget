@@ -129,6 +129,21 @@ New `getGuessHint` callable returns `{wordLength, firstLetter}` (word stays serv
 
 **Suggested batching:** P1+P4 share the words/guess callable surface; P6+P7 share guess-outcome data (P7's stats can be written by the same `submitGuess` finishing path). P2 and P3 are independent and quick. Recommended order: **P1 → P2 → P3 → P4 → P5 → P6 → P7** (bugs first, then high-value QoL, then features).
 
+### 🧪 Experiment: number of guesses per drawing
+Currently **3 attempts**, defined in TWO places that must stay in sync:
+- `functions/src/submitGuess.ts` → `MAX_ATTEMPTS` (the authoritative server cap — it rejects extra attempts).
+- `lib/features/guessing/guessing_screen.dart` → `_maxAttempts` (drives the "X attempts remaining" UI + when a guess is "finished" client-side).
+
+To try 4 or 5: change **both**, `firebase deploy --only functions`, rebuild. A mismatch lets the UI lie (e.g. show tries the server will reject). Worth play-testing alongside the now-progressive hint (length → first letter) to find a fun difficulty. Later this could become a remote-config / Firestore value so it's tunable without a deploy.
+
+### P8 — ✨ (idea) Points & rewards economy
+Award points for engagement and let them be spent on hints (currently hints are free).
+- **Earn:** +points for the first draw/login each UTC day; streak milestones (3 / 7 / 30 days) grant bonus points; optionally points for correct guesses (ties into P7 stats).
+- **Spend:** unlock the progressive hints (length, then first letter) for points instead of free — natural fit with the P4 hint levels.
+- **Store:** a `users/{uid}.points` balance mutated **server-side only** (a callable / extend `submitGuess` + the streak fn), so it can't be client-forged — consistent with the word/guess/stats server-authority model. A "claim daily reward" callable grants once per UTC day (idempotent, like the notification/streak `last*Date` guards).
+- **Optional IAP:** buy points via in-app purchase (Google Play Billing via the `in_app_purchase` package) — needs store product setup + **server-side receipt validation** + a catalog. Significant; defer until the free earn/spend loop is proven fun.
+- **Effort: L** (new economy + IAP infra). Start with earn/spend-on-hints before any real-money IAP.
+
 ---
 
 ### Already fixed this session (for reference)

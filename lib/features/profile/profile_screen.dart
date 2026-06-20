@@ -65,8 +65,6 @@ class _GuessStatsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final maxWin = [stats.win1, stats.win2, stats.win3]
-        .fold<int>(1, (m, v) => v > m ? v : m);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -91,12 +89,8 @@ class _GuessStatsSection extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _WinBar(label: '1 try', value: stats.win1, max: maxWin),
-          const SizedBox(height: 8),
-          _WinBar(label: '2 tries', value: stats.win2, max: maxWin),
-          const SizedBox(height: 8),
-          _WinBar(label: '3 tries', value: stats.win3, max: maxWin),
+          const SizedBox(height: 20),
+          _AttemptsChart(stats: stats),
         ],
       ],
     );
@@ -129,43 +123,93 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _WinBar extends StatelessWidget {
-  const _WinBar({required this.label, required this.value, required this.max});
+/// Vertical bar chart of how many guesses it took to solve drawings: an
+/// "Attempts" header, one bar per attempt count (1/2/3) with the frequency
+/// shown just above each bar and the attempt number labelled below it.
+class _AttemptsChart extends StatelessWidget {
+  const _AttemptsChart({required this.stats});
 
-  final String label;
-  final int value;
-  final int max;
+  final GuessStats stats;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fraction = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0);
-    return Row(
+    final values = [stats.win1, stats.win2, stats.win3];
+    final maxWin = values.fold<int>(1, (m, v) => v > m ? v : m);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 56,
-          child: Text(label, style: theme.textTheme.bodySmall),
-        ),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: fraction,
-              minHeight: 16,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 28,
-          child: Text(
-            '$value',
-            textAlign: TextAlign.end,
-            style: theme.textTheme.bodySmall,
-          ),
+        Text('Attempts', style: theme.textTheme.titleSmall),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            for (var i = 0; i < values.length; i++)
+              Expanded(
+                child: _AttemptBar(
+                  guesses: i + 1,
+                  frequency: values[i],
+                  fraction: values[i] / maxWin,
+                ),
+              ),
+          ],
         ),
       ],
+    );
+  }
+}
+
+class _AttemptBar extends StatelessWidget {
+  const _AttemptBar({
+    required this.guesses,
+    required this.frequency,
+    required this.fraction,
+  });
+
+  final int guesses;
+  final int frequency;
+  final double fraction;
+
+  static const _maxBarHeight = 96.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final barHeight = frequency <= 0
+        ? 0.0
+        : (_maxBarHeight * fraction).clamp(6.0, _maxBarHeight);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Frequency, just above the bar.
+          Text(
+            '$frequency',
+            style: theme.textTheme.labelLarge
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: barHeight,
+            child: FractionallySizedBox(
+              widthFactor: 0.8, // 20% narrower than the column slot
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(6)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Number of guesses, on the bottom (x-axis).
+          Text('$guesses', style: theme.textTheme.bodyMedium),
+        ],
+      ),
     );
   }
 }
