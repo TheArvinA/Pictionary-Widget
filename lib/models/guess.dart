@@ -8,6 +8,7 @@ class Guess {
   final int? solvedOnAttempt;
   final String? revealedWord;
   final DateTime? completedAt;
+  final int hintsUsed;
 
   const Guess({
     required this.guesserId,
@@ -17,6 +18,7 @@ class Guess {
     this.solvedOnAttempt,
     this.revealedWord,
     this.completedAt,
+    this.hintsUsed = 0,
   });
 
   static String idFor({required String guesserId, required String drawerId}) =>
@@ -32,6 +34,7 @@ class Guess {
       solvedOnAttempt: (data['solvedOnAttempt'] as num?)?.toInt(),
       revealedWord: data['revealedWord'] as String?,
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+      hintsUsed: (data['hintsUsed'] as num?)?.toInt() ?? 0,
     );
   }
 }

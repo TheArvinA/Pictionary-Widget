@@ -117,6 +117,7 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
             date: todayKey(),
             drawerId: widget.drawerId,
             guess: raw.trim(),
+            hintsUsed: _hintLevel,
           );
 
       if (!res.correct) {
@@ -279,6 +280,9 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
             _correct = saved.correct;
             _solvedOnAttempt = saved.solvedOnAttempt;
             _revealedWord = saved.revealedWord;
+            // Restore the hint level so revealed hints persist across re-entry
+            // and the recorded hints-used count can't be undercounted.
+            _hintLevel = saved.hintsUsed.clamp(0, 2);
           }
         }
         return Column(

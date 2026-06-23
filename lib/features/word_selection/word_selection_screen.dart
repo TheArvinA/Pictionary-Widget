@@ -288,6 +288,11 @@ class _GuesserRow extends ConsumerWidget {
     final nameAsync = ref.watch(_guesserNameProvider(guesserId));
     final name = nameAsync.valueOrNull ?? guesserId;
 
+    // " · N hint(s)" suffix, or empty when no hints were used.
+    final hints = guess.hintsUsed;
+    final hintsSuffix =
+        hints > 0 ? ' · $hints hint${hints == 1 ? '' : 's'}' : '';
+
     Widget status;
     if (guess.correct) {
       status = Row(
@@ -296,7 +301,8 @@ class _GuesserRow extends ConsumerWidget {
           const Icon(Icons.check_circle, color: Colors.green, size: 18),
           const SizedBox(width: 4),
           Text(
-            'guessed in ${guess.solvedOnAttempt ?? guess.attempts.length}',
+            'guessed in ${guess.solvedOnAttempt ?? guess.attempts.length}'
+            '$hintsSuffix',
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: Colors.green),
           ),
@@ -309,7 +315,7 @@ class _GuesserRow extends ConsumerWidget {
           const Icon(Icons.cancel, color: Colors.red, size: 18),
           const SizedBox(width: 4),
           Text(
-            "didn't get it",
+            "didn't get it$hintsSuffix",
             style:
                 theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
           ),

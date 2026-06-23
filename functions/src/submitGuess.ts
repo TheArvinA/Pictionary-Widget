@@ -5,6 +5,7 @@ interface SubmitGuessData {
   date?: unknown;
   drawerId?: unknown;
   guess?: unknown;
+  hintsUsed?: unknown;
 }
 
 interface SubmitGuessResult {
@@ -42,6 +43,13 @@ export const submitGuess = onCall<SubmitGuessData, Promise<SubmitGuessResult>>(
     if (drawerId === callerUid) {
       throw new HttpsError('invalid-argument', "You can't guess your own drawing.");
     }
+
+    // Number of progressive hints the guesser used (0..3); sanitized to an int.
+    const rawHints = request.data?.hintsUsed;
+    const hintsUsed =
+      typeof rawHints === 'number' && Number.isFinite(rawHints)
+        ? Math.min(3, Math.max(0, Math.trunc(rawHints)))
+        : 0;
 
     const guessId = `${callerUid}_${drawerId}`;
     const db = getFirestore();
@@ -101,6 +109,7 @@ export const submitGuess = onCall<SubmitGuessData, Promise<SubmitGuessResult>>(
       attempts: newAttempts,
       correct,
       solvedOnAttempt,
+      hintsUsed,
       completedAt: finished ? FieldValue.serverTimestamp() : null,
       revealedWord: finished ? chosenWord : null,
     });
@@ -116,6 +125,8 @@ export const submitGuess = onCall<SubmitGuessData, Promise<SubmitGuessResult>>(
         : {
             failed: FieldValue.increment(1),
           };
+      // Lifetime hints-used total, incremented once per finished guess.
+      guessStats.hintsUsed = FieldValue.increment(hintsUsed);
       batch.set(
         db.doc(`users/${callerUid}`),
         { guessStats },
