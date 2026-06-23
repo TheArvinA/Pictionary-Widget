@@ -85,11 +85,16 @@ class PictionaryWidgetProvider : HomeWidgetProvider() {
         appWidgetIds: IntArray,
         friends: List<Friend>,
     ) {
-        // Build the work list: only the (up to 3) visible rows that are submitted with a url.
-        val jobs = ArrayList<Pair<Int, Friend>>(MAX_ROWS)
-        for (index in 0 until MAX_ROWS) {
-            val friend = friends.getOrNull(index) ?: continue
-            if (friend.submitted && friend.thumbUrl.isNotBlank()) {
+        // Build the work list: only the visible drawing cells that are submitted with a
+        // url. Mirrors the synchronous bind order in buildStateGuessing — including the
+        // overflow rule, so we never load a thumbnail over the "see all" tile.
+        val submitted = friends.filter { it.submitted }
+        val overflow = submitted.size > MAX_CELLS
+        val lastDrawingCell = if (overflow) MAX_CELLS - 1 else MAX_CELLS
+        val jobs = ArrayList<Pair<Int, Friend>>(MAX_CELLS)
+        for (index in 0 until lastDrawingCell) {
+            val friend = submitted.getOrNull(index) ?: continue
+            if (friend.thumbUrl.isNotBlank()) {
                 jobs.add(index to friend)
             }
         }
@@ -239,37 +244,61 @@ class PictionaryWidgetProvider : HomeWidgetProvider() {
         views.setOnClickPendingIntent(cellId, route(context, "/canvas?word=$word"))
     }
 
-    /** State 2: user drew; show friends who submitted so they can be guessed. */
+    /**
+     * State 2: user drew; show friends' DRAWINGS in a static 2-wide grid so they can
+     * be guessed. Only friends who actually submitted are shown (waiting friends are
+     * hidden — the whole grid is dominated by drawings). Capped at [MAX_CELLS]; if more
+     * than that submitted, the last cell becomes a "see all in feed" overflow affordance.
+     */
     private fun buildStateGuessing(context: Context, friends: List<Friend>): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.pictionary_widget_state2)
 
-        bindFriendRow(context, views, friends, 0, R.id.friend_row_1, R.id.friend_name_1, R.id.friend_status_1, R.id.friend_initial_1, R.id.friend_thumb_1)
-        bindFriendRow(context, views, friends, 1, R.id.friend_row_2, R.id.friend_name_2, R.id.friend_status_2, R.id.friend_initial_2, R.id.friend_thumb_2)
-        bindFriendRow(context, views, friends, 2, R.id.friend_row_3, R.id.friend_name_3, R.id.friend_status_3, R.id.friend_initial_3, R.id.friend_thumb_3)
+        // Drawings dominate: render submitted friends only, in order.
+        val submitted = friends.filter { it.submitted }
+        val overflow = submitted.size > MAX_CELLS
 
-        // Whole-widget fallback tap -> feed. The friend rows that are tappable override this.
+        for (index in 0 until MAX_CELLS) {
+            // When there are more submitted friends than cells, reserve the LAST cell
+            // as a "see all" overflow tile instead of a friend.
+            val isOverflowCell = overflow && index == MAX_CELLS - 1
+            val friend = if (isOverflowCell) null else submitted.getOrNull(index)
+            bindFriendCell(context, views, friend, index, isOverflowCell)
+        }
+
+        // Whole-widget fallback tap -> feed. Tappable cells override this.
         views.setOnClickPendingIntent(R.id.state2_root, route(context, "/feed"))
-        views.setOnClickPendingIntent(R.id.see_all, route(context, "/feed"))
         return views
     }
 
-    private fun bindFriendRow(
+    private fun bindFriendCell(
         context: Context,
         views: RemoteViews,
-        friends: List<Friend>,
+        friend: Friend?,
         index: Int,
-        rowId: Int,
-        nameId: Int,
-        statusId: Int,
-        initialId: Int,
-        thumbId: Int,
+        isOverflowCell: Boolean,
     ) {
-        val friend = friends.getOrNull(index)
-        if (friend == null) {
-            views.setViewVisibility(rowId, View.GONE)
+        val cellId = CELL_IDS[index]
+        val nameId = NAME_IDS[index]
+        val initialId = INITIAL_IDS[index]
+        val thumbId = THUMB_IDS[index]
+
+        // Overflow tile: a "see all" affordance routing to the feed.
+        if (isOverflowCell) {
+            views.setViewVisibility(cellId, View.VISIBLE)
+            views.setViewVisibility(thumbId, View.GONE)
+            views.setViewVisibility(initialId, View.VISIBLE)
+            views.setTextViewText(initialId, "+")
+            views.setTextViewText(nameId, context.getString(R.string.widget_see_more))
+            views.setOnClickPendingIntent(cellId, route(context, "/feed"))
             return
         }
-        views.setViewVisibility(rowId, View.VISIBLE)
+
+        if (friend == null) {
+            views.setViewVisibility(cellId, View.GONE)
+            return
+        }
+
+        views.setViewVisibility(cellId, View.VISIBLE)
         views.setTextViewText(nameId, friend.name)
         views.setTextViewText(initialId, friend.initial())
         // Initial is the synchronous fallback; the async pass swaps in the thumbnail
@@ -277,14 +306,8 @@ class PictionaryWidgetProvider : HomeWidgetProvider() {
         views.setViewVisibility(initialId, View.VISIBLE)
         views.setViewVisibility(thumbId, View.GONE)
 
-        if (friend.submitted) {
-            views.setTextViewText(statusId, context.getString(R.string.widget_guess))
-            views.setOnClickPendingIntent(rowId, route(context, "/guess/${friend.uid}"))
-        } else {
-            views.setTextViewText(statusId, context.getString(R.string.widget_waiting))
-            // Non-submitted friend falls through to the whole-widget feed tap.
-            views.setOnClickPendingIntent(rowId, route(context, "/feed"))
-        }
+        // Every submitted cell taps straight into THAT friend's guess screen.
+        views.setOnClickPendingIntent(cellId, route(context, "/guess/${friend.uid}"))
     }
 
     /** State 3: user drew AND guessed everyone available — show streak / day / summary. */
@@ -355,12 +378,26 @@ class PictionaryWidgetProvider : HomeWidgetProvider() {
         private const val STATE_GUESSING = 2
         private const val STATE_DONE = 3
 
-        /** Number of friend rows the state-2 layout renders. */
-        private const val MAX_ROWS = 3
+        /** Number of friend cells the state-2 grid renders (2 cols x 3 rows). */
+        private const val MAX_CELLS = 6
 
-        /** Row index -> view id, so the async pass and the layout stay in lock-step. */
-        private val THUMB_IDS = intArrayOf(R.id.friend_thumb_1, R.id.friend_thumb_2, R.id.friend_thumb_3)
-        private val INITIAL_IDS = intArrayOf(R.id.friend_initial_1, R.id.friend_initial_2, R.id.friend_initial_3)
+        /** Cell index -> view ids, so the async pass and the layout stay in lock-step. */
+        private val CELL_IDS = intArrayOf(
+            R.id.friend_cell_1, R.id.friend_cell_2, R.id.friend_cell_3,
+            R.id.friend_cell_4, R.id.friend_cell_5, R.id.friend_cell_6,
+        )
+        private val THUMB_IDS = intArrayOf(
+            R.id.friend_thumb_1, R.id.friend_thumb_2, R.id.friend_thumb_3,
+            R.id.friend_thumb_4, R.id.friend_thumb_5, R.id.friend_thumb_6,
+        )
+        private val INITIAL_IDS = intArrayOf(
+            R.id.friend_initial_1, R.id.friend_initial_2, R.id.friend_initial_3,
+            R.id.friend_initial_4, R.id.friend_initial_5, R.id.friend_initial_6,
+        )
+        private val NAME_IDS = intArrayOf(
+            R.id.friend_name_1, R.id.friend_name_2, R.id.friend_name_3,
+            R.id.friend_name_4, R.id.friend_name_5, R.id.friend_name_6,
+        )
 
         /**
          * Target min edge (px) for the decoded thumbnail. RemoteViews bitmaps cross an

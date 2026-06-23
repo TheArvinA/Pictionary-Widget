@@ -13,87 +13,81 @@
         android:layout_height="wrap_content"
         android:text="@string/widget_title_draw"
         android:textColor="@color/widget_text_secondary"
-        android:textSize="@dimen/widget_title_text"
+        android:textSize="@dimen/widget_status_text"
         android:textStyle="bold"
+        android:textAllCaps="true"
         android:maxLines="1"
         android:ellipsize="end"
         android:paddingBottom="@dimen/widget_row_spacing" />
 
+    <!-- Word cell 1 — large full-width row, ~1/3 of the remaining height. -->
     <LinearLayout
+        android:id="@+id/word_cell_1"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:orientation="horizontal"
-        android:baselineAligned="false">
+        android:layout_marginBottom="@dimen/widget_row_spacing"
+        android:background="@drawable/widget_cell_background"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="8dp">
 
-        <LinearLayout
-            android:id="@+id/word_cell_1"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:background="@drawable/widget_cell_background"
+        <TextView
+            android:id="@+id/word_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="@dimen/widget_word_text"
+            android:textStyle="bold"
             android:gravity="center"
-            android:orientation="vertical"
-            android:padding="8dp">
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
 
-            <TextView
-                android:id="@+id/word_1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="@dimen/widget_body_text"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:maxLines="2"
-                android:ellipsize="end" />
-        </LinearLayout>
+    <!-- Word cell 2 -->
+    <LinearLayout
+        android:id="@+id/word_cell_2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="@dimen/widget_row_spacing"
+        android:background="@drawable/widget_cell_background"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="8dp">
 
-        <LinearLayout
-            android:id="@+id/word_cell_2"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:background="@drawable/widget_cell_background"
+        <TextView
+            android:id="@+id/word_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="@dimen/widget_word_text"
+            android:textStyle="bold"
             android:gravity="center"
-            android:orientation="vertical"
-            android:padding="8dp">
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
 
-            <TextView
-                android:id="@+id/word_2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="@dimen/widget_body_text"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:maxLines="2"
-                android:ellipsize="end" />
-        </LinearLayout>
+    <!-- Word cell 3 -->
+    <LinearLayout
+        android:id="@+id/word_cell_3"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/widget_cell_background"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="8dp">
 
-        <LinearLayout
-            android:id="@+id/word_cell_3"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/widget_cell_background"
+        <TextView
+            android:id="@+id/word_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="@dimen/widget_word_text"
+            android:textStyle="bold"
             android:gravity="center"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <TextView
-                android:id="@+id/word_3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="@dimen/widget_body_text"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:maxLines="2"
-                android:ellipsize="end" />
-        </LinearLayout>
+            android:maxLines="1"
+            android:ellipsize="end" />
     </LinearLayout>
 </LinearLayout>

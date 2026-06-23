@@ -13,169 +13,292 @@
         android:layout_height="wrap_content"
         android:text="@string/widget_title_guess"
         android:textColor="@color/widget_text_secondary"
-        android:textSize="@dimen/widget_title_text"
+        android:textSize="@dimen/widget_status_text"
         android:textStyle="bold"
+        android:textAllCaps="true"
         android:maxLines="1"
         android:ellipsize="end"
         android:paddingBottom="@dimen/widget_row_spacing" />
 
-    <!-- Friend row 1 -->
+    <!-- Grid row 1 (cells 1 & 2) -->
     <LinearLayout
-        android:id="@+id/friend_row_1"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="@drawable/widget_cell_background"
-        android:padding="6dp"
+        android:baselineAligned="false"
         android:layout_marginBottom="@dimen/widget_row_spacing">
 
-        <ImageView
-            android:id="@+id/friend_thumb_1"
-            android:layout_width="@dimen/widget_initial_size"
-            android:layout_height="@dimen/widget_initial_size"
-            android:scaleType="centerCrop"
-            android:contentDescription="@string/widget_thumb_desc"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/friend_initial_1"
-            android:layout_width="@dimen/widget_initial_size"
-            android:layout_height="@dimen/widget_initial_size"
-            android:background="@drawable/widget_initial_background"
-            android:gravity="center"
-            android:textColor="@color/widget_text_primary"
-            android:textStyle="bold"
-            android:textSize="@dimen/widget_body_text" />
-
-        <TextView
-            android:id="@+id/friend_name_1"
+        <FrameLayout
+            android:id="@+id/friend_cell_1"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/widget_text_primary"
-            android:textSize="@dimen/widget_body_text"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/widget_cell_background">
 
-        <TextView
-            android:id="@+id/friend_status_1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/widget_accent"
-            android:textSize="@dimen/widget_status_text" />
+            <ImageView
+                android:id="@+id/friend_thumb_1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/widget_thumb_desc"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/friend_initial_1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_initial_background"
+                android:gravity="center"
+                android:textColor="@color/widget_text_primary"
+                android:textStyle="bold"
+                android:textSize="@dimen/widget_streak_text" />
+
+            <TextView
+                android:id="@+id/friend_name_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@color/widget_scrim"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="@dimen/widget_status_text"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/friend_cell_2"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="3dp"
+            android:background="@drawable/widget_cell_background">
+
+            <ImageView
+                android:id="@+id/friend_thumb_2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/widget_thumb_desc"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/friend_initial_2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_initial_background"
+                android:gravity="center"
+                android:textColor="@color/widget_text_primary"
+                android:textStyle="bold"
+                android:textSize="@dimen/widget_streak_text" />
+
+            <TextView
+                android:id="@+id/friend_name_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@color/widget_scrim"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="@dimen/widget_status_text"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </FrameLayout>
     </LinearLayout>
 
-    <!-- Friend row 2 -->
+    <!-- Grid row 2 (cells 3 & 4) -->
     <LinearLayout
-        android:id="@+id/friend_row_2"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="@drawable/widget_cell_background"
-        android:padding="6dp"
+        android:baselineAligned="false"
         android:layout_marginBottom="@dimen/widget_row_spacing">
 
-        <ImageView
-            android:id="@+id/friend_thumb_2"
-            android:layout_width="@dimen/widget_initial_size"
-            android:layout_height="@dimen/widget_initial_size"
-            android:scaleType="centerCrop"
-            android:contentDescription="@string/widget_thumb_desc"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/friend_initial_2"
-            android:layout_width="@dimen/widget_initial_size"
-            android:layout_height="@dimen/widget_initial_size"
-            android:background="@drawable/widget_initial_background"
-            android:gravity="center"
-            android:textColor="@color/widget_text_primary"
-            android:textStyle="bold"
-            android:textSize="@dimen/widget_body_text" />
-
-        <TextView
-            android:id="@+id/friend_name_2"
+        <FrameLayout
+            android:id="@+id/friend_cell_3"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/widget_text_primary"
-            android:textSize="@dimen/widget_body_text"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/widget_cell_background">
 
-        <TextView
-            android:id="@+id/friend_status_2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/widget_accent"
-            android:textSize="@dimen/widget_status_text" />
+            <ImageView
+                android:id="@+id/friend_thumb_3"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/widget_thumb_desc"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/friend_initial_3"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_initial_background"
+                android:gravity="center"
+                android:textColor="@color/widget_text_primary"
+                android:textStyle="bold"
+                android:textSize="@dimen/widget_streak_text" />
+
+            <TextView
+                android:id="@+id/friend_name_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@color/widget_scrim"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="@dimen/widget_status_text"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/friend_cell_4"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="3dp"
+            android:background="@drawable/widget_cell_background">
+
+            <ImageView
+                android:id="@+id/friend_thumb_4"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/widget_thumb_desc"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/friend_initial_4"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_initial_background"
+                android:gravity="center"
+                android:textColor="@color/widget_text_primary"
+                android:textStyle="bold"
+                android:textSize="@dimen/widget_streak_text" />
+
+            <TextView
+                android:id="@+id/friend_name_4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@color/widget_scrim"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="@dimen/widget_status_text"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </FrameLayout>
     </LinearLayout>
 
-    <!-- Friend row 3 -->
+    <!-- Grid row 3 (cells 5 & 6) -->
     <LinearLayout
-        android:id="@+id/friend_row_3"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="@drawable/widget_cell_background"
-        android:padding="6dp"
-        android:layout_marginBottom="@dimen/widget_row_spacing">
+        android:baselineAligned="false">
 
-        <ImageView
-            android:id="@+id/friend_thumb_3"
-            android:layout_width="@dimen/widget_initial_size"
-            android:layout_height="@dimen/widget_initial_size"
-            android:scaleType="centerCrop"
-            android:contentDescription="@string/widget_thumb_desc"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/friend_initial_3"
-            android:layout_width="@dimen/widget_initial_size"
-            android:layout_height="@dimen/widget_initial_size"
-            android:background="@drawable/widget_initial_background"
-            android:gravity="center"
-            android:textColor="@color/widget_text_primary"
-            android:textStyle="bold"
-            android:textSize="@dimen/widget_body_text" />
-
-        <TextView
-            android:id="@+id/friend_name_3"
+        <FrameLayout
+            android:id="@+id/friend_cell_5"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/widget_text_primary"
-            android:textSize="@dimen/widget_body_text"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/widget_cell_background">
 
-        <TextView
-            android:id="@+id/friend_status_3"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/widget_accent"
-            android:textSize="@dimen/widget_status_text" />
+            <ImageView
+                android:id="@+id/friend_thumb_5"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/widget_thumb_desc"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/friend_initial_5"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_initial_background"
+                android:gravity="center"
+                android:textColor="@color/widget_text_primary"
+                android:textStyle="bold"
+                android:textSize="@dimen/widget_streak_text" />
+
+            <TextView
+                android:id="@+id/friend_name_5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@color/widget_scrim"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="@dimen/widget_status_text"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/friend_cell_6"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="3dp"
+            android:background="@drawable/widget_cell_background">
+
+            <ImageView
+                android:id="@+id/friend_thumb_6"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/widget_thumb_desc"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/friend_initial_6"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_initial_background"
+                android:gravity="center"
+                android:textColor="@color/widget_text_primary"
+                android:textStyle="bold"
+                android:textSize="@dimen/widget_streak_text" />
+
+            <!-- Doubles as the "see all in feed" affordance when >6 friends submitted. -->
+            <TextView
+                android:id="@+id/friend_name_6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@color/widget_scrim"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="@dimen/widget_status_text"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </FrameLayout>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/see_all"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:text="@string/widget_see_all"
-        android:textColor="@color/widget_text_muted"
-        android:textSize="@dimen/widget_status_text"
-        android:gravity="center" />
 </LinearLayout>
