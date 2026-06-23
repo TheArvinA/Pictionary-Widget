@@ -36,6 +36,7 @@ class FunctionsService {
     required String date,
     required String drawerId,
     required String guess,
+    int hintsUsed = 0,
   }) async {
     try {
       final callable = _functions.httpsCallable('submitGuess');
@@ -43,6 +44,7 @@ class FunctionsService {
         'date': date,
         'drawerId': drawerId,
         'guess': guess,
+        'hintsUsed': hintsUsed,
       });
       final data = result.data;
       return (

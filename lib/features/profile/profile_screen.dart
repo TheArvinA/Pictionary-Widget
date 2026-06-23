@@ -87,6 +87,10 @@ class _GuessStatsSection extends StatelessWidget {
               Expanded(
                 child: _StatTile(label: 'Missed', value: stats.failed),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatTile(label: 'Hints used', value: stats.hintsUsed),
+              ),
             ],
           ),
           const SizedBox(height: 20),

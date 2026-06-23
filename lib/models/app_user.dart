@@ -7,6 +7,7 @@ class GuessStats {
   final int win1;
   final int win2;
   final int win3;
+  final int hintsUsed;
 
   const GuessStats({
     this.correct = 0,
@@ -14,6 +15,7 @@ class GuessStats {
     this.win1 = 0,
     this.win2 = 0,
     this.win3 = 0,
+    this.hintsUsed = 0,
   });
 
   factory GuessStats.fromMap(Map<String, dynamic>? m) {
@@ -25,6 +27,7 @@ class GuessStats {
       win1: read('win1'),
       win2: read('win2'),
       win3: read('win3'),
+      hintsUsed: read('hintsUsed'),
     );
   }
 
