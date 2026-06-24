@@ -128,7 +128,6 @@ class _FriendsFeed extends ConsumerWidget {
         }
 
         final drawings = ref.watch(_friendDrawingsProvider(friendIds));
-        final names = ref.watch(friendNamesProvider(friendIds));
         return drawings.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => ErrorState(
@@ -141,9 +140,6 @@ class _FriendsFeed extends ConsumerWidget {
             final submittedCount = rounds
                 .where((r) => r.hasSubmittedDrawing && r.drawingUrl != null)
                 .length;
-            // Resolve display names; fall back to uid while names are loading.
-            final nameMap =
-                names.valueOrNull ?? const <String, String>{};
             if (submittedCount == 0) {
               return const _EmptyState(
                 message:
@@ -165,13 +161,11 @@ class _FriendsFeed extends ConsumerWidget {
                 final hasDrawing = round != null &&
                     round.hasSubmittedDrawing &&
                     round.drawingUrl != null;
-                final friendName = nameMap[friendId] ?? friendId;
                 if (!hasDrawing) {
-                  return _PlaceholderTile(friendName: friendName);
+                  return _PlaceholderTile(friendId: friendId);
                 }
                 return _DrawingTile(
                   friendId: friendId,
-                  friendName: friendName,
                   drawingUrl: round.drawingUrl!,
                 );
               },
@@ -186,16 +180,17 @@ class _FriendsFeed extends ConsumerWidget {
 class _DrawingTile extends ConsumerWidget {
   const _DrawingTile({
     required this.friendId,
-    required this.friendName,
     required this.drawingUrl,
   });
   final String friendId;
-  final String friendName;
   final String drawingUrl;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final guess = ref.watch(_myGuessProvider(friendId)).valueOrNull;
+    // Resolve this drawer's name per-uid; falls back to the uid while loading.
+    final friendName =
+        ref.watch(userDisplayNameProvider(friendId)).valueOrNull ?? friendId;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -275,13 +270,15 @@ class _GuessBadge extends StatelessWidget {
   }
 }
 
-class _PlaceholderTile extends StatelessWidget {
-  const _PlaceholderTile({required this.friendName});
-  final String friendName;
+class _PlaceholderTile extends ConsumerWidget {
+  const _PlaceholderTile({required this.friendId});
+  final String friendId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final friendName =
+        ref.watch(userDisplayNameProvider(friendId)).valueOrNull ?? friendId;
     return Card(
       color: scheme.surfaceContainerHighest,
       child: Padding(

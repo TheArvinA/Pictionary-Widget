@@ -47,17 +47,6 @@ final _guessesForMeProvider = StreamProvider.autoDispose<List<Guess>>((ref) {
       );
 });
 
-/// Resolves a single guesser's display name. String-keyed (stable) so each row
-/// gets its own cached provider instance — unlike a List-keyed family, which
-/// uses identity equality and would respawn (stuck loading) on every rebuild.
-final _guesserNameProvider =
-    StreamProvider.autoDispose.family<String, String>((ref, uid) {
-  return ref
-      .watch(firestoreServiceProvider)
-      .watchUser(uid)
-      .map((u) => u?.displayName ?? uid);
-});
-
 class WordSelectionScreen extends ConsumerWidget {
   const WordSelectionScreen({super.key});
 
@@ -218,8 +207,8 @@ class _AlreadyDrawnState extends StatelessWidget {
 }
 
 /// Lists everyone who has guessed the signed-in user's drawing today and how
-/// they did. Each row resolves its own guesser's display name via the
-/// string-keyed [_guesserNameProvider].
+/// they did. Each row resolves its own guesser's display name via the shared
+/// string-keyed [userDisplayNameProvider].
 class _GuessersSection extends ConsumerWidget {
   const _GuessersSection();
 
@@ -285,7 +274,7 @@ class _GuesserRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final nameAsync = ref.watch(_guesserNameProvider(guesserId));
+    final nameAsync = ref.watch(userDisplayNameProvider(guesserId));
     final name = nameAsync.valueOrNull ?? guesserId;
 
     // " · N hint(s)" suffix, or empty when no hints were used.

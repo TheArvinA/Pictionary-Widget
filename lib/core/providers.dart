@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/app_user.dart';
 import '../services/widget_service.dart';
 import 'auth/auth_service.dart';
 import 'firebase/firestore_service.dart';
@@ -52,55 +49,14 @@ final authStateChangesProvider = StreamProvider<User?>(
   (ref) => ref.watch(authServiceProvider).authStateChanges(),
 );
 
-/// Watches user documents for each uid in [uids] and emits a merged
-/// Map<uid, displayName>.  Emits once all sources have produced a value.
-final friendNamesProvider = StreamProvider.autoDispose
-    .family<Map<String, String>, List<String>>((ref, uids) {
-  if (uids.isEmpty) return Stream.value(const <String, String>{});
-
-  final service = ref.watch(firestoreServiceProvider);
-  final streams = uids.map(service.watchUser).toList();
-
-  final controller = StreamController<Map<String, String>>();
-  final latest = List<AppUser?>.filled(uids.length, null);
-  // Track which slots have received their first value.
-  final received = List<bool>.filled(uids.length, false);
-  var open = streams.length;
-
-  void emit() {
-    if (received.any((r) => !r)) return;
-    final map = <String, String>{};
-    for (var i = 0; i < uids.length; i++) {
-      final user = latest[i];
-      map[uids[i]] = user?.displayName ?? uids[i];
-    }
-    controller.add(map);
-  }
-
-  final subs = <StreamSubscription<AppUser?>>[];
-  for (var i = 0; i < streams.length; i++) {
-    final index = i;
-    subs.add(
-      streams[index].listen(
-        (user) {
-          latest[index] = user;
-          received[index] = true;
-          emit();
-        },
-        onError: controller.addError,
-        onDone: () {
-          open--;
-          if (open == 0) controller.close();
-        },
-      ),
-    );
-  }
-
-  controller.onCancel = () async {
-    for (final sub in subs) {
-      await sub.cancel();
-    }
-  };
-
-  return controller.stream;
+/// Resolves a single user's display name, falling back to their uid while the
+/// doc is loading or has no name. String-keyed (stable) so each uid gets its
+/// own cached provider instance, and a slow doc only delays that one name —
+/// not every friend's (unlike a List-keyed fan-in).
+final userDisplayNameProvider =
+    StreamProvider.autoDispose.family<String, String>((ref, uid) {
+  return ref
+      .watch(firestoreServiceProvider)
+      .watchUser(uid)
+      .map((u) => u?.displayName ?? uid);
 });

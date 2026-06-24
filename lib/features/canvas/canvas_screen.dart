@@ -142,7 +142,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         throw StateError('Canvas not ready');
       }
 
-      final image = await boundary.toImage(pixelRatio: 3);
+      final image = await boundary.toImage(pixelRatio: 2);
       final byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {

@@ -45,7 +45,7 @@ class FirestoreService {
       final snap = await tx.get(ref);
       final existing = snap.data()?['wordChoices'];
       if (existing is List &&
-          existing.length == 3 &&
+          existing.isNotEmpty &&
           existing.every((e) => e is String)) {
         return existing.cast<String>();
       }

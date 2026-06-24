@@ -152,6 +152,11 @@ class _PictionaryAppState extends ConsumerState<PictionaryApp>
             router.go(pending);
           });
         }
+      } else {
+        // Signed out: tear down the previous user's FCM state so the
+        // token-refresh subscription stops writing to the old uid and we
+        // unsubscribe from the broadcast 'daily' topic.
+        unawaited(ref.read(fcmServiceProvider).unregister());
       }
     });
 

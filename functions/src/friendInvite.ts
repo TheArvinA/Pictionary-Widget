@@ -60,8 +60,8 @@ export const addFriendByCode = onCall<AddFriendData, Promise<AddFriendResult>>(
     const friendRef = db.doc(`users/${friendId}`);
 
     const batch = db.batch();
-    batch.update(callerRef, { friendIds: FieldValue.arrayUnion(friendId) });
-    batch.update(friendRef, { friendIds: FieldValue.arrayUnion(callerUid) });
+    batch.set(callerRef, { friendIds: FieldValue.arrayUnion(friendId) }, { merge: true });
+    batch.set(friendRef, { friendIds: FieldValue.arrayUnion(callerUid) }, { merge: true });
     await batch.commit();
 
     return { friendId, displayName };

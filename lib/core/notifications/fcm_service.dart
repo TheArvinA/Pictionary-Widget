@@ -34,6 +34,19 @@ class FcmService {
     await _messaging.subscribeToTopic('daily');
   }
 
+  /// Tears down per-user FCM state on sign-out: cancels the token-refresh
+  /// subscription (so it can't keep writing the new token to the old uid) and
+  /// unsubscribes from the broadcast 'daily' topic. Best-effort; never throws.
+  Future<void> unregister() async {
+    try {
+      await _tokenRefreshSub?.cancel();
+      _tokenRefreshSub = null;
+      await _messaging.unsubscribeFromTopic('daily');
+    } catch (_) {
+      // Ignore: sign-out cleanup must never surface an error.
+    }
+  }
+
   /// Wires tap-to-navigate. Call once after the router is available, passing a
   /// callback that navigates to the route found in `message.data['route']`.
   ///

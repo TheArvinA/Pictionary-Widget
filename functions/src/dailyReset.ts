@@ -61,6 +61,17 @@ export const dailyWordReset = onSchedule(
     const wordList = (masterSnap.data()?.words as string[] | undefined) ?? FALLBACK_WORDS;
 
     const date = todayUtc();
+
+    // Create-once: if the doc for this date already exists (e.g. a manual
+    // re-run), skip the rewrite AND the push so the pool isn't reshuffled and
+    // users aren't notified twice. The scheduled 00:00 run writes a brand-new
+    // date doc that doesn't exist yet, so it still proceeds normally.
+    const existing = await db.doc(`daily/${date}`).get();
+    if (existing.exists) {
+      logger.info('Daily word pool already exists; skipping rewrite and push', { date });
+      return;
+    }
+
     // Per-day candidate POOL (not the final 3). Each user picks a random
     // 3-word subset from this pool, persisted to their private round doc, so
     // friends rarely draw the same word.
