@@ -20,8 +20,24 @@
         android:ellipsize="end"
         android:paddingBottom="@dimen/widget_row_spacing" />
 
+    <!-- Empty state: shown when the user has drawn but no friend has submitted
+         yet, so the grid would otherwise be blank. Toggled from the provider:
+         VISIBLE (grid rows GONE) when zero cells are populated. -->
+    <TextView
+        android:id="@+id/state2_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="@string/widget_state2_empty"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="@dimen/widget_word_text"
+        android:visibility="gone" />
+
     <!-- Grid row 1 (cells 1 & 2) -->
     <LinearLayout
+        android:id="@+id/state2_grid_row_1"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -41,7 +57,7 @@
                 android:id="@+id/friend_thumb_1"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/widget_thumb_desc"
                 android:visibility="gone" />
 
@@ -83,7 +99,7 @@
                 android:id="@+id/friend_thumb_2"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/widget_thumb_desc"
                 android:visibility="gone" />
 
@@ -116,6 +132,7 @@
 
     <!-- Grid row 2 (cells 3 & 4) -->
     <LinearLayout
+        android:id="@+id/state2_grid_row_2"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -135,7 +152,7 @@
                 android:id="@+id/friend_thumb_3"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/widget_thumb_desc"
                 android:visibility="gone" />
 
@@ -177,7 +194,7 @@
                 android:id="@+id/friend_thumb_4"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/widget_thumb_desc"
                 android:visibility="gone" />
 
@@ -210,6 +227,7 @@
 
     <!-- Grid row 3 (cells 5 & 6) -->
     <LinearLayout
+        android:id="@+id/state2_grid_row_3"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -228,7 +246,7 @@
                 android:id="@+id/friend_thumb_5"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/widget_thumb_desc"
                 android:visibility="gone" />
 
@@ -270,7 +288,7 @@
                 android:id="@+id/friend_thumb_6"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/widget_thumb_desc"
                 android:visibility="gone" />
 

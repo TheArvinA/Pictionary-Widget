@@ -77,12 +77,39 @@ class _PictionaryAppState extends ConsumerState<PictionaryApp>
     // Cold start: Firebase Auth restores the persisted session asynchronously,
     // so currentUser is still null here. Navigating now would be overwritten by
     // the redirect (-> /sign-in then -> /), losing the deep link. Defer it and
-    // let the authStateChanges listener replay it once the user is restored.
+    // actively wait for the first restored user — don't rely solely on the
+    // authStateChanges listener in [build], whose loading->data transition can
+    // be missed if auth restores before that listener registers.
     if (FirebaseAuth.instance.currentUser == null) {
       _pendingDeepLink = route;
+      unawaited(_navigateOnceAuthRestored(router));
       return;
     }
     router.go(route);
+  }
+
+  /// Waits for Firebase Auth to restore a non-null user (with a timeout), then
+  /// replays the pending widget deep-link. Robust against the race where the
+  /// auth state becomes non-null before the [build] listener is attached, which
+  /// would otherwise strand the app on Home. The listener and this path both
+  /// null out [_pendingDeepLink] first, so whichever wins navigates exactly once.
+  Future<void> _navigateOnceAuthRestored(GoRouter router) async {
+    try {
+      await FirebaseAuth.instance
+          .authStateChanges()
+          .firstWhere((u) => u != null)
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Timed out or stream error: leave _pendingDeepLink for the listener.
+      return;
+    }
+    final pending = _pendingDeepLink;
+    if (pending == null) return; // The auth listener already replayed it.
+    _pendingDeepLink = null;
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      router.go(pending);
+    });
   }
 
   Future<void> _wireWidgetTaps(GoRouter router) async {

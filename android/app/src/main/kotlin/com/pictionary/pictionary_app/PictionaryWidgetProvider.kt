@@ -257,6 +257,23 @@ class PictionaryWidgetProvider : HomeWidgetProvider() {
         val submitted = friends.filter { it.submitted }
         val overflow = submitted.size > MAX_CELLS
 
+        // Empty state: the user has drawn but no friend has submitted yet, so the
+        // grid would be blank. Show a friendly waiting message filling the widget
+        // instead, and hide the (empty) grid rows.
+        if (submitted.isEmpty()) {
+            views.setViewVisibility(R.id.state2_empty, View.VISIBLE)
+            views.setViewVisibility(R.id.state2_grid_row_1, View.GONE)
+            views.setViewVisibility(R.id.state2_grid_row_2, View.GONE)
+            views.setViewVisibility(R.id.state2_grid_row_3, View.GONE)
+            views.setOnClickPendingIntent(R.id.state2_root, route(context, "/feed"))
+            return views
+        }
+
+        views.setViewVisibility(R.id.state2_empty, View.GONE)
+        views.setViewVisibility(R.id.state2_grid_row_1, View.VISIBLE)
+        views.setViewVisibility(R.id.state2_grid_row_2, View.VISIBLE)
+        views.setViewVisibility(R.id.state2_grid_row_3, View.VISIBLE)
+
         for (index in 0 until MAX_CELLS) {
             // When there are more submitted friends than cells, reserve the LAST cell
             // as a "see all" overflow tile instead of a friend.

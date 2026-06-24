@@ -151,6 +151,21 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       final Uint8List bytes = byteData.buffer.asUint8List();
 
       final date = todayKey();
+
+      // Persist the owner-only secret word ourselves. When the canvas is reached
+      // via the home-screen widget's word deep-link, word_selection's chooseWord()
+      // never ran, so without this the private chosenWord is never written and
+      // guessing this drawing later fails ("not ready"). Idempotent merge, so the
+      // in-app path (which already called chooseWord) is unaffected. Guard empty.
+      final word = widget.word.trim();
+      if (word.isNotEmpty) {
+        await ref.read(firestoreServiceProvider).chooseWord(
+              date: date,
+              drawerId: uid,
+              word: word,
+            );
+      }
+
       final url = await ref.read(storageServiceProvider).uploadDrawing(
             date: date,
             drawerId: uid,
