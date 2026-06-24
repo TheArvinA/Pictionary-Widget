@@ -65,6 +65,27 @@ flutter run                                         # rebuild — the guessing/r
 
 **⚠️ Data-migration gotcha (important for your current test accounts):** any round drawn *before* this change has its `chosenWord` in the **old** player-doc location, not the new private subdoc. After deploying, guessing such a drawing returns *"This drawing isn't ready to guess yet"* (the callable finds no word). To retest cleanly, **start fresh on each account**: in Firestore delete today's `rounds/{date}/players/{uid}` doc **and** its `private/round` subdoc (and the `rounds/{date}/guesses/{guesserId}_{drawerId}` docs), then re-pick a word → draw → submit. New rounds write the word to the private subdoc automatically.
 
+## 🔧 2026-06-24 — Widget UX fixes + codebase-audit fixes (branch `fix/widget-ux-and-audit`)
+
+Committed on `fix/widget-ux-and-audit` (`eb1e4e7` widget + `335118b` audit); `flutter analyze` + `tsc` clean. See `process_review.md` for the workflow log and `review-findings.md` for the full audit.
+
+**Widget UX (`eb1e4e7`) — needs device test (native is inspection-only):**
+- Widget word tap now deep-links to the canvas (was opening Home — cold-start auth race in `app.dart`).
+- Drawing via the widget word now writes the secret word (`canvas._submit` calls `chooseWord`) — previously such drawings couldn't be guessed.
+- State 2 shows a "Waiting for friends to draw…" empty state instead of blank.
+- Friend-drawing preview uses `fitCenter` (whole image, no crop).
+
+**Audit fixes (`335118b`) — all low-severity:** FCM sign-out cleanup; `ensureMyWords` <3-pool guard; deleted the `friendNamesProvider` fan-in → shared per-uid name provider; canvas `pixelRatio` 3→2; `dailyReset` create-once guard; `addFriendByCode` set-merge. **Deferred #5** (tighten `users` read rule — risks breaking name resolution).
+
+**To activate + finish:**
+```powershell
+firebase deploy --only functions   # dailyReset + friendInvite changed
+flutter run                        # widget + Dart changes
+```
+Then device-test the widget (word→canvas, empty state, full-image preview), and **merge `fix/widget-ux-and-audit` → main**. Optional: re-run the `codebase-audit` workflow to recover the ~11 findings whose verification was dropped to a session limit.
+
+---
+
 ## 🗺️ Feedback backlog & roadmap — from on-device testing (2026-06-18)
 
 Guessing works end-to-end after the security deploy. New items found while testing, ordered **most → least important**. All are **code tasks** (codeable via workflows), separate from the manual device steps further down. Each notes the grounded root cause (for bugs), the recommended lightest approach, and a rough effort (S/M/L).

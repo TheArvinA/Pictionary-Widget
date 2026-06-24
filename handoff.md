@@ -12,6 +12,14 @@ A daily Pictionary app — Flutter (Android-first), Firebase backend, with an An
 
 ## What was done last session
 
+### 2026-06-24 — Widget UX fixes + codebase audit + low-risk fixes ✅ (branch `fix/widget-ux-and-audit`)
+Two batches, both committed; `flutter analyze` + `tsc` clean. **A process log of the workflows used is in [`process_review.md`](./process_review.md); the audit findings are in `review-findings.md` (gitignored, local).**
+
+- **Widget UX fixes** (`eb1e4e7`): (1) widget word tap → canvas (not Home) — fixed a cold-start race where the deep-link replay relied only on a `ref.listen` auth transition that could be missed; `app.dart` now also actively awaits the first non-null auth state. (2) drawing via the widget deep-link skipped `chooseWord`, so the secret word was never written — `canvas._submit` now writes it. (3) blank State 2 with no submitted friends → "Waiting for friends to draw…" empty state. (4) cropped preview → `fitCenter`. **Native is inspection-only (no APK build in CI) — device-test.**
+- **Low-risk audit fixes** (`335118b`, from `review-findings.md`, all low-severity): FCM sign-out cleanup; `ensureMyWords` <3-pool guard; **deleted the `friendNamesProvider` all-or-nothing fan-in → shared per-uid `userDisplayNameProvider`** (one slow friend doc no longer blanks all names); canvas `pixelRatio` 3→2; `dailyReset` create-once guard; `addFriendByCode` set-merge. **Deferred audit #5** (tighten `users` read rule — risky).
+
+**To activate:** `firebase deploy --only functions` (dailyReset + friendInvite changed) + `flutter run`. Then **merge `fix/widget-ux-and-audit` → `main`** once device-tested. The ~11 audit findings whose verification was dropped to a session limit can be recovered by re-running the `codebase-audit` workflow.
+
 ### Quality pass — all bugs fixed ✅ (latest session)
 
 Full audit of all 25 Dart files + 5 TypeScript files. 9 issues found and fixed. `flutter analyze` clean (run locally to confirm — Flutter not in the CI sandbox). All on disk, **not committed**.
