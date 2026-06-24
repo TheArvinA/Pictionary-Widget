@@ -84,10 +84,10 @@ flutter run                        # widget + Dart changes
 ```
 Then device-test the widget (word→canvas, empty state, full-image preview), and **merge `fix/widget-ux-and-audit` → main**.
 
-**Audit re-run done — 3 open findings remain** (low-severity; full detail in `review-findings.md`):
-1. [ ] **Dead model fields** parsed from Firestore but never read → delete them (lightweight).
-2. [ ] **Stale streak:** the streak isn't decremented on a missed day, so widget/profile show an inflated value until you next draw (then it resets to 1). Heavier fix — *recommend defer*.
-3. [ ] **Widget cold-start dead-end:** launching from the widget straight into `/guess` or `/results` leaves no back button / nav bar. *Recommend fixing* — add an AppBar back/home action (or seat the shell beneath these routes on cold start).
+**Audit re-run done — 3 open findings; 2 now fixed** (low-severity; full detail in `review-findings.md`):
+1. [x] **Dead model fields** — ✅ DONE (`6f02b03`): removed `photoUrl`/`fcmToken`/`lastPlayedDate` (AppUser), `submittedAt` (PlayerRound), `generatedAt` (DailyWords).
+2. [ ] **Stale streak:** the streak isn't decremented on a missed day, so widget/profile show an inflated value until you next draw (then it resets to 1). Heavier fix — **deferred** (would re-add an `lastPlayedDate` parse + effective-streak calc, or a scheduled reset).
+3. [x] **Widget cold-start dead-end** — ✅ DONE (`6f02b03`): `/canvas`, `/guess`, `/results` each got an AppBar leading that pops if possible, else goes home (`context.canPop() ? pop : go('/')`).
 
 Deferred: audit #5 (tighten the `users` read rule — risks breaking name resolution).
 

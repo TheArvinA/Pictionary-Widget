@@ -20,11 +20,11 @@ Two batches, both committed; `flutter analyze` + `tsc` clean. **A process log of
 
 **To activate:** `firebase deploy --only functions` (dailyReset + friendInvite changed) + `flutter run`. Then **merge `fix/widget-ux-and-audit` → `main`** once device-tested.
 
-- **Audit re-run complete** (recovered the limit-dropped findings; full list in `review-findings.md`). **3 genuinely-open findings remain** (all low-severity):
-  1. **Model fields parsed-but-never-read** (dead code) — lightweight deletion.
-  2. **Streak never decremented on a missed day** → widget/profile show a stale inflated streak until you next draw (then it resets to 1). Heavier fix (effective-streak computation or a scheduled reset) — recommend defer.
-  3. **Cold-start from the widget into `/guess` or `/results` strands the user** (those routes are pushed above the shell, so no back button / nav bar). Recommend fixing — give them an AppBar back/home, or seat the shell beneath on cold start.
-- **Deferred:** audit #5 (tighten the `users` read rule — risky).
+- **Audit re-run complete** (recovered the limit-dropped findings; full list in `review-findings.md`). Of the 3 genuinely-open findings, **2 are now fixed** (`6f02b03`):
+  1. ✅ **Dead model fields** removed (`photoUrl`/`fcmToken`/`lastPlayedDate`, `submittedAt`, `generatedAt`).
+  2. ⏸️ **Streak never decremented on a missed day** → widget/profile show a stale inflated streak until you next draw (then it resets to 1). **Deferred** — heavier fix (effective-streak calc or scheduled reset).
+  3. ✅ **Widget cold-start dead-end** fixed — `/canvas`, `/guess`, `/results` got an AppBar back/home leading (`canPop ? pop : go('/')`).
+- **Deferred:** audit #5 (tighten the `users` read rule — risky) + the streak staleness (#2 above).
 
 ### Quality pass — all bugs fixed ✅ (latest session)
 

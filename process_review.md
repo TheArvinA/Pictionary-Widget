@@ -48,7 +48,13 @@ Resumed the interrupted audit to recover the findings whose verify agents were d
 - ✅ **7 already fixed** (`335118b`): FCM sign-out, ensureMyWords, friendNamesProvider, pixelRatio, dailyReset create-once, addFriendByCode, dailyReset push.
 - ⏸️ **1 deferred:** #5 tighten `users` read rule.
 - 🆕 **3 genuinely new/open** (recovered): (a) model fields parsed-but-never-read (dead code, lightweight delete); (b) streak never decremented on a missed day → stale inflated streak (heavier — defer); (c) cold-start from the widget into `/guess`/`/results` strands the user (no back/nav — moderate, recommend fixing).
-`review-findings.md` regenerated to this current status. **The 3 open findings are NOT yet fixed** — teed up for the user to action.
+`review-findings.md` regenerated to this current status.
+
+### Follow-up fixes (2026-06-24, lead inline — `6f02b03`)
+Of the 3 open findings, the user approved fixing #1 + #3 (done inline, `flutter analyze` clean):
+- **#1 dead model fields** — deleted `photoUrl`/`fcmToken`/`lastPlayedDate` (AppUser), `submittedAt` (PlayerRound), `generatedAt` (DailyWords); confirmed 0 external reads first.
+- **#3 widget cold-start dead-end** — added an AppBar back/home leading (`canPop ? pop : go('/')`) to `/canvas`, `/guess`, `/results` (the routes pushed above the shell).
+- **Deferred:** #2 streak staleness (heavier) + audit #5 (rules).
 
 ### Session summary (2026-06-23 → 06-24)
 3 workflows + 1 lead-driven recovery. Branch `fix/widget-ux-and-audit`: `eb1e4e7` (widget UX fixes) + `335118b` (audit fixes). `handoff.md` / `next_steps.md` updated; `review-findings.md` rewritten (gitignored, local). Outstanding: device-test the native widget changes, `firebase deploy --only functions` for the backend fixes, then merge the branch to `main`. Deferred: audit #5 (rules), the ~11 dropped audit findings (re-run the audit to recover).
