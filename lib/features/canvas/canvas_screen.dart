@@ -203,6 +203,12 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
     return Scaffold(
       appBar: AppBar(
+        // Reachable via a cold-start widget word deep-link (no back stack),
+        // so give an explicit way out: pop if possible, else go home.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+        ),
         title: Text('Draw: ${widget.word}'),
         actions: [
           IconButton(

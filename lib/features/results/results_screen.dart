@@ -52,7 +52,15 @@ class ResultsScreen extends ConsumerWidget {
     final user = ref.watch(_userProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Today's results")),
+      appBar: AppBar(
+        // Reachable via a cold-start widget/notification deep-link (no back
+        // stack), so give an explicit way out: pop if possible, else go home.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+        ),
+        title: const Text("Today's results"),
+      ),
       body: user.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(

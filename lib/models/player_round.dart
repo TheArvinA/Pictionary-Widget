@@ -4,13 +4,11 @@ class PlayerRound {
   final String drawerId;
   final String? drawingUrl;
   final bool hasSubmittedDrawing;
-  final DateTime? submittedAt;
 
   const PlayerRound({
     required this.drawerId,
     this.drawingUrl,
     this.hasSubmittedDrawing = false,
-    this.submittedAt,
   });
 
   factory PlayerRound.fromFirestore(
@@ -21,7 +19,6 @@ class PlayerRound {
       drawerId: doc.id,
       drawingUrl: data['drawingUrl'] as String?,
       hasSubmittedDrawing: (data['hasSubmittedDrawing'] as bool?) ?? false,
-      submittedAt: (data['submittedAt'] as Timestamp?)?.toDate(),
     );
   }
 }

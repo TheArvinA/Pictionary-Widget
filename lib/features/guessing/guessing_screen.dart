@@ -178,7 +178,15 @@ class _GuessingScreenState extends ConsumerState<GuessingScreen>
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Guess')),
+      appBar: AppBar(
+        // Reachable via a cold-start widget deep-link (no back stack), so give
+        // an explicit way out: pop if possible, else go home.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+        ),
+        title: const Text('Guess'),
+      ),
       body: uid == null
           ? const Center(child: Text('You need to be signed in to guess.'))
           : _buildGated(context, uid),
