@@ -82,7 +82,14 @@ Committed on `fix/widget-ux-and-audit` (`eb1e4e7` widget + `335118b` audit); `fl
 firebase deploy --only functions   # dailyReset + friendInvite changed
 flutter run                        # widget + Dart changes
 ```
-Then device-test the widget (word→canvas, empty state, full-image preview), and **merge `fix/widget-ux-and-audit` → main**. Optional: re-run the `codebase-audit` workflow to recover the ~11 findings whose verification was dropped to a session limit.
+Then device-test the widget (word→canvas, empty state, full-image preview), and **merge `fix/widget-ux-and-audit` → main**.
+
+**Audit re-run done — 3 open findings remain** (low-severity; full detail in `review-findings.md`):
+1. [ ] **Dead model fields** parsed from Firestore but never read → delete them (lightweight).
+2. [ ] **Stale streak:** the streak isn't decremented on a missed day, so widget/profile show an inflated value until you next draw (then it resets to 1). Heavier fix — *recommend defer*.
+3. [ ] **Widget cold-start dead-end:** launching from the widget straight into `/guess` or `/results` leaves no back button / nav bar. *Recommend fixing* — add an AppBar back/home action (or seat the shell beneath these routes on cold start).
+
+Deferred: audit #5 (tighten the `users` read rule — risks breaking name resolution).
 
 ---
 

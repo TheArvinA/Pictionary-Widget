@@ -18,7 +18,13 @@ Two batches, both committed; `flutter analyze` + `tsc` clean. **A process log of
 - **Widget UX fixes** (`eb1e4e7`): (1) widget word tap → canvas (not Home) — fixed a cold-start race where the deep-link replay relied only on a `ref.listen` auth transition that could be missed; `app.dart` now also actively awaits the first non-null auth state. (2) drawing via the widget deep-link skipped `chooseWord`, so the secret word was never written — `canvas._submit` now writes it. (3) blank State 2 with no submitted friends → "Waiting for friends to draw…" empty state. (4) cropped preview → `fitCenter`. **Native is inspection-only (no APK build in CI) — device-test.**
 - **Low-risk audit fixes** (`335118b`, from `review-findings.md`, all low-severity): FCM sign-out cleanup; `ensureMyWords` <3-pool guard; **deleted the `friendNamesProvider` all-or-nothing fan-in → shared per-uid `userDisplayNameProvider`** (one slow friend doc no longer blanks all names); canvas `pixelRatio` 3→2; `dailyReset` create-once guard; `addFriendByCode` set-merge. **Deferred audit #5** (tighten `users` read rule — risky).
 
-**To activate:** `firebase deploy --only functions` (dailyReset + friendInvite changed) + `flutter run`. Then **merge `fix/widget-ux-and-audit` → `main`** once device-tested. The ~11 audit findings whose verification was dropped to a session limit can be recovered by re-running the `codebase-audit` workflow.
+**To activate:** `firebase deploy --only functions` (dailyReset + friendInvite changed) + `flutter run`. Then **merge `fix/widget-ux-and-audit` → `main`** once device-tested.
+
+- **Audit re-run complete** (recovered the limit-dropped findings; full list in `review-findings.md`). **3 genuinely-open findings remain** (all low-severity):
+  1. **Model fields parsed-but-never-read** (dead code) — lightweight deletion.
+  2. **Streak never decremented on a missed day** → widget/profile show a stale inflated streak until you next draw (then it resets to 1). Heavier fix (effective-streak computation or a scheduled reset) — recommend defer.
+  3. **Cold-start from the widget into `/guess` or `/results` strands the user** (those routes are pushed above the shell, so no back button / nav bar). Recommend fixing — give them an AppBar back/home, or seat the shell beneath on cold start.
+- **Deferred:** audit #5 (tighten the `users` read rule — risky).
 
 ### Quality pass — all bugs fixed ✅ (latest session)
 

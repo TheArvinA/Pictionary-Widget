@@ -43,5 +43,12 @@ Newest entries first.
   - **#5 (tighten `users` read rule) DEFERRED** — risks breaking friend/guesser name resolution; needs a deploy + careful device test; low severity.
   - **Outcome: ✅ ship.** Verify agent confirmed all 6 fixes + flutter analyze + tsc clean, no regressions. Lead re-ran the combined gate (analyze + tsc clean). Files: `fcm_service.dart`, `app.dart`, `firestore_service.dart`, `providers.dart`, `feed_screen.dart`, `word_selection_screen.dart`, `canvas_screen.dart`, `dailyReset.ts`, `friendInvite.ts`. **Committed `335118b`.** Backend changes need `firebase deploy --only functions`.
 
+### Workflow: `codebase-audit` (RESUMED, run `wf_56f39970-ca1`)
+Resumed the interrupted audit to recover the findings whose verify agents were dropped to the session limit. Reviewers cached; the dropped verify agents re-ran (completed in ~45s). **Outcome: 11 confirmed** (up from 9). Caveat: the resume **cached the verify verdicts from before commit `335118b`**, so 7 of the 11 *show* as open but are already fixed. After cross-referencing against the applied fixes:
+- ✅ **7 already fixed** (`335118b`): FCM sign-out, ensureMyWords, friendNamesProvider, pixelRatio, dailyReset create-once, addFriendByCode, dailyReset push.
+- ⏸️ **1 deferred:** #5 tighten `users` read rule.
+- 🆕 **3 genuinely new/open** (recovered): (a) model fields parsed-but-never-read (dead code, lightweight delete); (b) streak never decremented on a missed day → stale inflated streak (heavier — defer); (c) cold-start from the widget into `/guess`/`/results` strands the user (no back/nav — moderate, recommend fixing).
+`review-findings.md` regenerated to this current status. **The 3 open findings are NOT yet fixed** — teed up for the user to action.
+
 ### Session summary (2026-06-23 → 06-24)
 3 workflows + 1 lead-driven recovery. Branch `fix/widget-ux-and-audit`: `eb1e4e7` (widget UX fixes) + `335118b` (audit fixes). `handoff.md` / `next_steps.md` updated; `review-findings.md` rewritten (gitignored, local). Outstanding: device-test the native widget changes, `firebase deploy --only functions` for the backend fixes, then merge the branch to `main`. Deferred: audit #5 (rules), the ~11 dropped audit findings (re-run the audit to recover).
